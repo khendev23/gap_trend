@@ -1,0 +1,12 @@
+{
+  "name": "church-home",
+  "private": true,
+  "scripts": {
+    "dev:front": "pnpm --filter ./apps/frontend dev",
+    "dev:back": "pnpm --filter ./apps/backend start:dev",
+    "dev": "concurrently -k \"pnpm dev:back\" \"pnpm dev:front\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
