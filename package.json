@@ -7,6 +7,10 @@
     "dev": "concurrently -k \"pnpm dev:back\" \"pnpm dev:front\""
   },
   "devDependencies": {
+    "@types/react-swipeable": "^4.3.0",
     "concurrently": "^9.0.0"
+  },
+  "dependencies": {
+    "react-swipeable": "^7.0.2"
   }
 }

@@ -1,16 +1,41 @@
-export default async function Home() {
-    let text = "loading...";
-    try {
-        const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
-        const res = await fetch(`${base}/health`, { cache: "no-store" });
-        text = res.ok ? (await res.json()).message ?? "ok" : `HTTP ${res.status}`;
-    } catch {
-        text = "백엔드 연결 실패";
-    }
+import MiddleMenu from "@/component/main/ts/middleMenu";
+import KellyMenu from "@/component/main/ts/kellyMenu";
+import AnnounceMenu from "@/component/main/ts/announceMenu";
+import WorshipMenu from "@/component/main/ts/worshipMenu";
+
+export default function Home() {
     return (
-        <main className="p-6">
-            <h1 className="text-2xl font-bold">교회 홈페이지</h1>
-            <p className="mt-2">백엔드 상태: {text}</p>
+        <main
+            className={`
+        w-screen relative
+        /* 고정 헤더 높이만큼 패딩 (모바일/데스크톱) */
+        pt-[calc(env(safe-area-inset-top)+3.5rem)] md:pt-[calc(env(safe-area-inset-top)+4rem)]
+        bg-white
+      `}
+        >
+            {/* 히어로 섹션 */}
+            <section className="w-screen h-[70vh]">
+                {/* 인사 텍스트 */}
+                <div className="w-screen relative text-black pt-4 pl-12">
+                    <h6 className="text-[0.8rem] leading-5">000님</h6>
+                    <h6 className="text-[0.8rem] leading-5">사랑하고 축복합니다.</h6>
+                </div>
+
+                {/* 메인 이미지 */}
+                <div className="w-screen flex justify-center mt-2">
+                    <img
+                        src="https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/web/homePic.jpg"
+                        alt=""
+                        className="w-[85vw] max-w-[900px] rounded-md"
+                    />
+                </div>
+            </section>
+
+            {/* 하위 섹션들 */}
+            <MiddleMenu />
+            <AnnounceMenu />
+            <WorshipMenu />
+            <KellyMenu />
         </main>
     );
 }
