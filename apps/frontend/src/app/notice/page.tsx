@@ -76,14 +76,18 @@ export default function MobileBulletinBoard() {
             );
     }, [q, category]);
 
+    // 예시: 실제로는 로그인 세션/권한 API로 대체
+    const isAdmin : boolean = true; // 👉 true면 업로드 버튼 보임
+
     return (
         <div className="min-h-screen bg-white text-gray-900 pb-24">
             {/* 상단 헤더 */}
             <header className="sticky top-0 z-10 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-b">
-                <div className="mx-auto max-w-xl px-4 py-3 grid grid-cols-3 items-center">
+                <div className="mx-auto max-w-xl px-4 py-3 flex items-center justify-between">
+                    {/* 뒤로가기 버튼 */}
                     <button
                         aria-label="Back"
-                        className="justify-self-start"
+                        className="rounded-lg p-2 hover:bg-gray-100"
                         onClick={() => history.back()}
                     >
                         <svg
@@ -99,29 +103,24 @@ export default function MobileBulletinBoard() {
                             <path d="M15 18l-6-6 6-6" />
                         </svg>
                     </button>
-                    <h1 className="font-bold tracking-tight text-center text-[clamp(1rem,5vw,1.25rem)] whitespace-nowrap">
+
+                    {/* 가운데 제목 */}
+                    <h1 className="font-bold tracking-tight text-[clamp(1rem,5vw,1.25rem)] whitespace-nowrap text-center flex-1">
                         공지사항/교회소식
                     </h1>
-                </div>
 
-                {/* 상단 필터 버튼 영역 */}
-                <div className="mx-auto max-w-xl px-4 pb-3">
-                    <div className="flex gap-2">
-                        <FilterButton
-                            active={category === "notice"}
-                            onClick={() =>
-                                setCategory((c) => (c === "notice" ? null : "notice"))
-                            }
+                    {/* 오른쪽 글쓰기 버튼 */}
+                    {isAdmin ? (
+                        <Link
+                            href="/notice/write"
+                            className="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 active:scale-95"
                         >
-                            공지사항
-                        </FilterButton>
-                        <FilterButton
-                            active={category === "news"}
-                            onClick={() => setCategory((c) => (c === "news" ? null : "news"))}
-                        >
-                            교회소식
-                        </FilterButton>
-                    </div>
+                            글쓰기
+                        </Link>
+                    ) : (
+
+                        <div className="w-14" />
+                        )}
                 </div>
             </header>
 
