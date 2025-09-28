@@ -43,7 +43,7 @@ export default function MiddleMenu() {
                                 <path d="m7.5 0.3125 0 6.5875" fill="none" stroke="#000000" />
                                 <path d="m5.10625 2.50625 4.7875 0" fill="none" stroke="#000000" />
                             </svg>
-                            <p className="mt-2 text-[0.9rem]">예배</p>
+                            <p className="mt-2 text-[0.9rem] text-center">예배</p>
                         </Link>
                     </div>
 
@@ -57,7 +57,7 @@ export default function MiddleMenu() {
                                 <path d="M12 7v6"/>
                                 <path d="M10 9h4"/>
                             </svg>
-                            <p className="mt-2 text-[0.9rem]">정통신학</p>
+                            <p className="mt-2 text-[0.9rem] text-center">정통신학</p>
                         </Link>
                     </div>
 
@@ -69,7 +69,7 @@ export default function MiddleMenu() {
                                 <path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>
                                 <path d="M7 20h8l-4 -4v-7l4 3l2 -2"/>
                             </svg>
-                            <p className="mt-2 text-[0.9rem]">신앙고백</p>
+                            <p className="mt-2 text-[0.9rem] text-center">신앙고백</p>
                         </Link>
                     </div>
 
@@ -82,7 +82,7 @@ export default function MiddleMenu() {
                                 <path d="M9 4v13"/>
                                 <path d="M15 7v13"/>
                             </svg>
-                            <p className="mt-2 text-[0.9rem]">오시는길</p>
+                            <p className="mt-2 text-[0.9rem] text-center">오시는길</p>
                         </Link>
                     </div>
                 </div>
