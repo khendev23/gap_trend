@@ -7,11 +7,11 @@ export default function Home() {
     return (
         <main
             className={`
-        w-screen relative
-        /* 고정 헤더 높이만큼 패딩 (모바일/데스크톱) */
-        pt-[calc(env(safe-area-inset-top)+3.5rem)] md:pt-[calc(env(safe-area-inset-top)+4rem)]
-        bg-white
-      `}
+                w-screen relative
+                /* 고정 헤더 높이만큼 패딩 (모바일/데스크톱) */
+                pt-[calc(env(safe-area-inset-top)+3.5rem)] md:pt-[calc(env(safe-area-inset-top)+4rem)]
+                bg-white
+            `}
         >
             {/* 히어로 섹션 */}
             <section className="w-screen h-[70vh]">
