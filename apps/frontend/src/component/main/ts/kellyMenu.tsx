@@ -1,28 +1,51 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSwipeable } from "react-swipeable";
 
-const images = [
-    "https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/kelly/kelly240603.jpg",
-    "https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/kelly/kelly240701.jpg",
-    "https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/kelly/IMG_9459.jpeg",
-    "https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/kelly/IMG_9460.jpeg",
-    "https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/kelly/IMG_9461.jpeg",
-];
+// const images = [
+//     "https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/kelly/kelly240603.jpg",
+//     "https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/kelly/kelly240701.jpg",
+//     "https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/kelly/IMG_9459.jpeg",
+//     "https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/kelly/IMG_9460.jpeg",
+//     "https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/kelly/IMG_9461.jpeg",
+// ];
+
+type KellyItem = { id: string; publicUrl: string; alt?: string };
 
 type Dir = "prev" | "next";
 
 export default function KellyMenu() {
+    const [items, setItems] = useState<KellyItem[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const last = images.length - 1;
+    const last = Math.max(items.length - 1, 0);
 
     const moveToSlide = (dir: Dir) => {
         setCurrentIndex((prev) =>
             dir === "next" ? (prev < last ? prev + 1 : 0) : prev > 0 ? prev - 1 : last
         );
     };
+
+    // 데이터 로딩
+    useEffect(() => {
+        const ctrl = new AbortController();
+        const base = process.env.NEXT_PUBLIC_API_BASE_URL; // 예: https://api.gapchurch.kr
+        const url = `/api/kelly/latest`;
+
+        (async () => {
+            try {
+                const res = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data: KellyItem[] = await res.json();
+                if (Array.isArray(data) && data.length) setItems(data);
+            } catch {
+
+            }
+        })();
+
+        return () => ctrl.abort();
+    }, []);
 
     const handlers = useSwipeable({
         onSwipedLeft: () => moveToSlide("next"),
@@ -33,7 +56,7 @@ export default function KellyMenu() {
 
     // 접근성: 현재 슬라이드 x/총 n
     const ariaLabel = useMemo(
-        () => `현재 슬라이드 ${currentIndex + 1} / 총 ${images.length}`,
+        () => `현재 슬라이드 ${currentIndex + 1} / 총 ${items.length}`,
         [currentIndex]
     );
 
@@ -80,11 +103,11 @@ export default function KellyMenu() {
                         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
                         aria-live="polite"
                     >
-                        {images.map((src, idx) => (
-                            <div key={idx} className="min-w-full flex justify-center">
+                        {(items).map((it, idx) => (
+                            <div key={it.id ?? idx} className="min-w-full flex justify-center">
                                 <img
-                                    src={src}
-                                    alt={`말씀 켈리 이미지 ${idx + 1}`}
+                                    src={it.publicUrl}
+                                    alt={it.alt ?? `말씀 켈리 이미지 ${idx + 1}`}
                                     className="max-h-full w-auto object-contain rounded-md shadow-sm"
                                 />
                             </div>
@@ -93,14 +116,15 @@ export default function KellyMenu() {
 
                     {/* 인디케이터(점) */}
                     <div className="absolute left-1/2 -translate-x-1/2 -bottom-3 md:-bottom-4 flex gap-2">
-                        {images.map((_, i) => (
+                        {items.map((_, i) => (
                             <button
                                 key={i}
                                 type="button"
                                 aria-label={`슬라이드 ${i + 1}로 이동`}
                                 onClick={() => setCurrentIndex(i)}
                                 className={`h-2.5 w-2.5 rounded-full transition
-                  ${i === currentIndex ? "bg-black" : "bg-black/30"}`}
+                                    ${i === currentIndex ? "bg-black" : "bg-black/30"}`
+                                }
                             />
                         ))}
                     </div>
