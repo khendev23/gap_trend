@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model kellyImage {
+  imageId          BigInt   @id @default(autoincrement()) @map("image_id")
+  originalFilename String   @map("original_filename") @db.VarChar(255)
+  storedFilename   String   @map("stored_filename") @db.VarChar(255)
+  filePath         String   @map("file_path") @db.VarChar(500)
+  fileExtension    String   @map("file_extension") @db.VarChar(10)
+  contentType      String   @map("content_type") @db.VarChar(100)
+  fileSize         BigInt   @map("file_size")
+  createdAt        DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt        DateTime @default(now()) @map("updated_at") @db.DateTime(0)
+  deleted          Boolean  @default(false) @map("deleted")
+  description      String?  @map("description") @db.VarChar(255)
+
+  @@map("kelly_image")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model notice_attachments {
+  id        BigInt   @id @default(autoincrement()) @map("id")
+  noticeId  BigInt   @map("notice_id")
+  fileName  String   @map("file_name") @db.VarChar(255)
+  fileUrl   String   @map("file_url") @db.VarChar(500)
+  mimeType  String?  @map("mime_type") @db.VarChar(120)
+  fileSize  Int?     @map("file_size")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  notices   notices  @relation(fields: [noticeId], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_notice_attachments_notice")
+
+  @@index([noticeId], map: "IX_notice_attach_notice")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model notice_categories {
+  id        BigInt    @id @default(autoincrement()) @map("id")
+  name      String    @unique(map: "name") @map("name") @db.VarChar(80)
+  slug      String    @unique(map: "slug") @map("slug") @db.VarChar(80)
+  sortOrder Int       @default(0) @map("sort_order")
+  createdAt DateTime  @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.DateTime(0)
+  notices   notices[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model notices {
+  id                BigInt               @id @default(autoincrement()) @map("id")
+  title             String               @map("title") @db.VarChar(200)
+  content           String?              @map("content") @db.MediumText
+  categoryId        BigInt               @map("category_id")
+  visibility        notices_visibility   @default(PUBLIC) @map("visibility")
+  createdAt         DateTime             @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt         DateTime             @default(now()) @map("updated_at") @db.DateTime(0)
+  deletedAt         DateTime?            @map("deleted_at") @db.DateTime(0)
+  noticeAttachments notice_attachments[]
+  noticeCategories  notice_categories    @relation(fields: [categoryId], references: [id], onUpdate: Restrict, map: "fk_notices_category")
+
+  @@index([categoryId], map: "IX_notices_category")
+  @@index([deletedAt], map: "IX_notices_deleted")
+  @@index([visibility], map: "IX_notices_visibility")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model refresh_token {
+  tokenId      BigInt   @id @default(autoincrement()) @map("token_id")
+  userId       BigInt   @map("user_id")
+  refreshToken String   @unique(map: "uk_refresh_token") @map("refresh_token") @db.VarChar(255)
+  expiryDate   DateTime @map("expiry_date") @db.DateTime(0)
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@index([userId], map: "idx_user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user {
+  userId         BigInt    @id @default(autoincrement()) @map("user_id")
+  socialId       String    @map("social_id") @db.VarChar(100)
+  provider       String    @default("kakao") @map("provider") @db.VarChar(50)
+  email          String?   @map("email") @db.VarChar(100)
+  name           String?   @map("name") @db.VarChar(255)
+  role           user_role @default(ROLE_USER) @map("role")
+  approvalStatus String    @default("PENDING") @map("approval_status") @db.VarChar(20)
+  enabled        Boolean   @default(true) @map("enabled")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt      DateTime  @default(now()) @map("updated_at") @db.DateTime(0)
+
+  @@unique([socialId, provider], map: "uk_social_id_provider")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model worship {
+  worshipId   BigInt   @id @default(autoincrement()) @map("worship_id")
+  title       String   @map("title") @db.VarChar(255)
+  preacher    String?  @map("preacher") @db.VarChar(255)
+  bibleText   String?  @map("bible_text") @db.VarChar(255)
+  youtubeUrl  String   @map("youtube_url") @db.VarChar(500)
+  worshipDate DateTime @map("worship_date") @db.Date
+  worshipType String   @map("worship_type") @db.VarChar(50)
+  isPublic    Boolean  @default(true) @map("is_public")
+  description String?  @map("description") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.DateTime(0)
+
+  @@index([worshipDate], map: "idx_worship_date")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model worship_image {
+  imageId          BigInt   @id @default(autoincrement()) @map("image_id")
+  worshipId        BigInt?  @map("worship_id")
+  originalFilename String   @map("original_filename") @db.VarChar(255)
+  storedFilename   String   @map("stored_filename") @db.VarChar(255)
+  filePath         String   @map("file_path") @db.VarChar(500)
+  fileExtension    String   @map("file_extension") @db.VarChar(10)
+  contentType      String   @map("content_type") @db.VarChar(100)
+  fileSize         BigInt   @map("file_size")
+  createdAt        DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  deleted          Boolean  @default(false) @map("deleted")
+  description      String?  @map("description") @db.VarChar(255)
+}
+
+enum notices_visibility {
+  PUBLIC
+  MEMBER
+  STAFF
+}
+
+enum user_role {
+  ROLE_ADMIN
+  ROLE_MANAGER
+  ROLE_USER
+}
