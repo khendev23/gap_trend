@@ -22,7 +22,7 @@ export class NoticeService {
 
   // 2. 각 카테고리별 게시글 조회
   async getLatestPosts(slug: string, take = 5) {
-    const categoryId = await this.getCategoryId(slug);
+    const categoryId : bigint = await this.getCategoryId(slug);
 
     if (!categoryId) return [];
 
