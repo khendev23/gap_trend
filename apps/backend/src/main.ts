@@ -4,6 +4,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { BigIntToStringInterceptor } from './common/interceptors/bigint-to-string.interceptor';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -12,6 +13,7 @@ async function bootstrap() {
         origin: [/localhost:3000$/],
         credentials: true,
     });
+    app.use(cookieParser());
 
     app.useGlobalFilters(new PrismaExceptionFilter());
 
