@@ -29,7 +29,10 @@ export default function MiddleMenu() {
                 >
                     {/* 예배 */}
                     <div className="flex flex-col items-center justify-between">
-                        <Link href="/worship">
+                        <Link
+                            href="/worship"
+                            className="flex flex-col items-center justify-center text-center"
+                        >
                             <svg
                                 id="Prayer--Streamline-Atlas"
                                 xmlns="http://www.w3.org/2000/svg"
@@ -49,7 +52,10 @@ export default function MiddleMenu() {
 
                     {/* 정통신학 */}
                     <div className="flex flex-col items-center justify-between">
-                        <Link href="/gospel/theology">
+                        <Link
+                            href="/gospel/theology"
+                            className="flex flex-col items-center justify-center text-center"
+                        >
                             <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                 <path d="M19 4v16h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12z"/>
@@ -63,7 +69,10 @@ export default function MiddleMenu() {
 
                     {/* 신앙고백 */}
                     <div className="flex flex-col items-center justify-between">
-                        <Link href="/gospel/confession">
+                        <Link
+                            href="/gospel/confession"
+                            className="flex flex-col items-center justify-center text-center"
+                        >
                             <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                 <path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>
@@ -75,7 +84,10 @@ export default function MiddleMenu() {
 
                     {/* 오시는길 */}
                     <div className="flex flex-col items-center justify-between">
-                        <Link href="/church/location">
+                        <Link
+                            href="/church/location"
+                            className="flex flex-col items-center justify-center text-center"
+                        >
                             <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                                 <path d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13"/>
