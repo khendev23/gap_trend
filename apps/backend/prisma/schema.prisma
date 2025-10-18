@@ -134,8 +134,7 @@ enum terms_status {
 
 // ===== User & Auth =====
 model user {
-  userId            BigInt    @id @default(autoincrement()) @map("user_id")
-  // 소셜 제거, 자체가입 기준 필드
+  userId            String    @id @map("user_id") @db.VarChar(30)
   name              String    @map("name") @db.VarChar(255)
   phone             String    @unique @map("phone") @db.VarChar(20) // 010-1234-5678 등
   email             String?   @map("email") @db.VarChar(100)
@@ -160,7 +159,7 @@ model user {
 
 model refreshToken {
   tokenId    BigInt   @id @default(autoincrement()) @map("token_id")
-  userId     BigInt   @map("user_id")
+  userId     String   @map("user_id") @db.VarChar(30)
   token      String   @unique(map: "uk_refresh_token") @map("refresh_token") @db.VarChar(255)
   expiryDate DateTime @map("expiry_date") @db.DateTime(0)
   createdAt  DateTime @default(now()) @map("created_at") @db.DateTime(0)
@@ -197,14 +196,12 @@ model terms {
 // ===== User Consent (동의 이력) =====
 model userConsent {
   consentId       BigInt   @id @default(autoincrement()) @map("consent_id")
-  userId          BigInt   @map("user_id")
+  userId          String   @map("user_id") @db.VarChar(30)
   termsId         BigInt   @map("terms_id")
   termsVersion    Int      @map("terms_version")
   contentHash     String?  @map("content_hash") @db.Char(64) // SHA-256 등
   contentSnapshot String?  @map("content_snapshot") @db.MediumText // 동의 당시 원문 스냅샷
   consentedAt     DateTime @default(now()) @map("consented_at") @db.DateTime(0)
-  ipAddress       String?  @map("ip_address") @db.VarChar(45)
-  userAgent       String?  @map("user_agent") @db.VarChar(500)
 
   // Relations
   user  user  @relation(fields: [userId], references: [userId], onDelete: Cascade)
