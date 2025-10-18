@@ -4,8 +4,9 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -74,35 +75,6 @@ model notices {
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model refreshToken {
-  tokenId      BigInt   @id @default(autoincrement()) @map("token_id")
-  userId       BigInt   @map("user_id")
-  refreshToken String   @unique(map: "uk_refresh_token") @map("refresh_token") @db.VarChar(255)
-  expiryDate   DateTime @map("expiry_date") @db.DateTime(0)
-  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(0)
-
-  @@index([userId], map: "idx_user_id")
-  @@map("refresh_token")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model user {
-  userId         BigInt    @id @default(autoincrement()) @map("user_id")
-  socialId       String    @map("social_id") @db.VarChar(100)
-  provider       String    @default("kakao") @map("provider") @db.VarChar(50)
-  email          String?   @map("email") @db.VarChar(100)
-  name           String?   @map("name") @db.VarChar(255)
-  role           user_role @default(ROLE_USER) @map("role")
-  approvalStatus String    @default("PENDING") @map("approval_status") @db.VarChar(20)
-  enabled        Boolean   @default(true) @map("enabled")
-  createdAt      DateTime  @default(now()) @map("created_at") @db.DateTime(0)
-  updatedAt      DateTime  @default(now()) @map("updated_at") @db.DateTime(0)
-
-  @@unique([socialId, provider], map: "uk_social_id_provider")
-  @@map("user")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model worship {
   worshipId   BigInt   @id @default(autoincrement()) @map("worship_id")
   title       String   @map("title") @db.VarChar(255)
@@ -137,14 +109,127 @@ model worshipImage {
   @@map("worship_image")
 }
 
+// datasource, generator는 기존 그대로 사용하세요.
+// datasource db {
+//   provider = "mysql" // MariaDB 10.x 호환
+//   url      = env("DATABASE_URL")
+// }
+
+// ===== Enums =====
+enum user_role {
+  ROLE_USER
+  ROLE_ADMIN
+}
+
+enum approval_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum terms_status {
+  DRAFT
+  PUBLISHED
+}
+
+// ===== User & Auth =====
+model user {
+  userId            BigInt    @id @default(autoincrement()) @map("user_id")
+  // 소셜 제거, 자체가입 기준 필드
+  name              String    @map("name") @db.VarChar(255)
+  phone             String    @unique @map("phone") @db.VarChar(20) // 010-1234-5678 등
+  email             String?   @map("email") @db.VarChar(100)
+  passwordHash      String    @map("password_hash") @db.VarChar(255) // bcrypt/argon2 결과
+  passwordUpdatedAt DateTime? @map("password_updated_at") @db.DateTime(0)
+
+  role           user_role       @default(ROLE_USER) @map("role")
+  approvalStatus approval_status @default(PENDING) @map("approval_status")
+  enabled        Boolean         @default(true) @map("enabled")
+  lastLoginAt    DateTime?       @map("last_login_at") @db.DateTime(0)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.DateTime(0)
+
+  // Relations
+  refreshTokens refreshToken[]
+  consents      userConsent[]
+
+  @@index([phone], map: "idx_user_phone")
+  @@map("user")
+}
+
+model refreshToken {
+  tokenId    BigInt   @id @default(autoincrement()) @map("token_id")
+  userId     BigInt   @map("user_id")
+  token      String   @unique(map: "uk_refresh_token") @map("refresh_token") @db.VarChar(255)
+  expiryDate DateTime @map("expiry_date") @db.DateTime(0)
+  createdAt  DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  // Relation
+  user user @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId], map: "idx_user_id")
+  @@map("refresh_token")
+}
+
+// ===== Terms (약관 원문) =====
+model terms {
+  termsId     BigInt       @id @default(autoincrement()) @map("terms_id")
+  slug        String       @map("slug") @db.VarChar(50) // 'privacy', 'tos'
+  version     Int          @map("version")
+  locale      String       @map("locale") @db.VarChar(10) // 'ko-KR'
+  title       String       @map("title") @db.VarChar(200)
+  contentMd   String?      @map("content_md") @db.MediumText // Markdown 저장 시
+  contentHtml String?      @map("content_html") @db.MediumText // HTML 저장 시
+  status      terms_status @map("status")
+  effectiveAt DateTime     @map("effective_at") @db.DateTime(0)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt   DateTime     @default(now()) @map("updated_at") @db.DateTime(0)
+
+  // Relations
+  consents userConsent[]
+
+  @@unique([slug, locale, version], map: "uk_terms_slug_locale_version")
+  @@index([status, effectiveAt], map: "idx_terms_status_effective")
+  @@map("terms")
+}
+
+// ===== User Consent (동의 이력) =====
+model userConsent {
+  consentId       BigInt   @id @default(autoincrement()) @map("consent_id")
+  userId          BigInt   @map("user_id")
+  termsId         BigInt   @map("terms_id")
+  termsVersion    Int      @map("terms_version")
+  contentHash     String?  @map("content_hash") @db.Char(64) // SHA-256 등
+  contentSnapshot String?  @map("content_snapshot") @db.MediumText // 동의 당시 원문 스냅샷
+  consentedAt     DateTime @default(now()) @map("consented_at") @db.DateTime(0)
+  ipAddress       String?  @map("ip_address") @db.VarChar(45)
+  userAgent       String?  @map("user_agent") @db.VarChar(500)
+
+  // Relations
+  user  user  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  terms terms @relation(fields: [termsId], references: [termsId], onDelete: Restrict)
+
+  @@unique([userId, termsId, termsVersion], map: "uk_user_terms_version") // 동일 버전에 중복 동의 방지
+  @@index([userId, consentedAt], map: "idx_user_consent_user_date")
+  @@map("user_consent")
+}
+
+model phoneVerificationLog {
+  id         BigInt    @id @default(autoincrement())
+  phone      String    @map("phone") @db.VarChar(20)
+  provider   String?   @map("provider") @db.VarChar(50) // 예: 'aligo', 'coolsms', 'pass'
+  verifiedAt DateTime? @map("verified_at") @db.DateTime(0)
+  resultCode String?   @map("result_code") @db.VarChar(20)
+  message    String?   @map("message") @db.VarChar(255)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@index([phone], map: "idx_phone_verification_log_phone")
+  @@map("phone_verification_log")
+}
+
 enum notices_visibility {
   PUBLIC
   MEMBER
   STAFF
-}
-
-enum user_role {
-  ROLE_ADMIN
-  ROLE_MANAGER
-  ROLE_USER
 }
