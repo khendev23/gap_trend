@@ -1,9 +1,10 @@
 'use client';
 
 import {useState, useMemo, ChangeEvent, FormEvent, useEffect} from 'react';
+import { useRouter } from 'next/navigation';
 
 type FormState = {
-    username: string;
+    userId: string;
     password: string;
     name: string;
     phone: string;
@@ -31,6 +32,7 @@ type TermsDoc = {
 };
 
 export default function SignUpPage() {
+    const router = useRouter();
     const [step, setStep] = useState<'consent' | 'form'>('consent');
 
     // --- 약관 동의 상태 ---
@@ -40,7 +42,7 @@ export default function SignUpPage() {
 
     // --- 폼 상태 ---
     const [form, setForm] = useState<FormState>({
-        username: '',
+        userId: '',
         password: '',
         name: '',
         phone: '',
@@ -50,6 +52,7 @@ export default function SignUpPage() {
     const [showPw, setShowPw] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [ok, setOk] = useState(false);
+    const [redirectIn, setRedirectIn] = useState<number | null>(null);
 
     const [privacy, setPrivacy] = useState<TermsDoc | null>(null);
     const [tos, setTos] = useState<TermsDoc | null>(null);
@@ -79,14 +82,34 @@ export default function SignUpPage() {
         load();
     }, [])
 
+    // ⬅️ SignUpPage 내부
+    useEffect(() => {
+        if (!ok) return;
+
+        setRedirectIn(5);                 // 5초부터 시작
+        const timer = setInterval(() => {
+            setRedirectIn((prev) => {
+                if (prev === null) return null;
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    router.push('/user/login'); // 0초 되면 이동
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [ok, router]);
+
     // ---------- 실시간 필드별 검사기 ----------
     const liveValidate = (draft: FormState): FieldErrors => {
         const e: FieldErrors = {};
 
         // 아이디
-        if (draft.username.length > 30) e.username = '아이디는 30자 이하로 입력해 주세요.';
-        else if (!idRegexLive.test(draft.username))
-            e.username = '아이디는 영어와 숫자만 사용할 수 있습니다.';
+        if (draft.userId.length > 30) e.userId = '아이디는 30자 이하로 입력해 주세요.';
+        else if (!idRegexLive.test(draft.userId))
+            e.userId = '아이디는 영어와 숫자만 사용할 수 있습니다.';
 
         // 비밀번호
         if (draft.password.length > 0 && !pwRegex.test(draft.password)) {
@@ -120,10 +143,10 @@ export default function SignUpPage() {
     const validateOnSubmit = (data: FormState): FieldErrors => {
         const e: FieldErrors = {};
 
-        if (!data.username.trim()) e.username = '아이디를 입력해 주세요.';
-        else if (data.username.length > 30) e.username = '아이디는 30자 이하로 입력해 주세요.';
-        else if (!idRegexFinal.test(data.username))
-            e.username = '아이디는 영어와 숫자만 사용할 수 있습니다.';
+        if (!data.userId.trim()) e.userId = '아이디를 입력해 주세요.';
+        else if (data.userId.length > 30) e.userId = '아이디는 30자 이하로 입력해 주세요.';
+        else if (!idRegexFinal.test(data.userId))
+            e.userId = '아이디는 영어와 숫자만 사용할 수 있습니다.';
 
         if (!data.password.trim()) e.password = '비밀번호를 입력해 주세요.';
         else if (!pwRegex.test(data.password))
@@ -172,7 +195,7 @@ export default function SignUpPage() {
         e.preventDefault();
         setOk(false);
 
-        setTouched({ username: true, password: true, name: true, phone: true });
+        setTouched({ userId: true, password: true, name: true, phone: true });
 
         const submitErrors = validateOnSubmit(form);
         if (Object.keys(submitErrors).length > 0) {
@@ -182,12 +205,28 @@ export default function SignUpPage() {
 
         try {
             setSubmitting(true);
-            // 실제 API 연동 예시:
-            // const res = await fetch('/api/auth/signup', {...});
-            // if (!res.ok) throw new Error('회원가입 실패');
+            // 실제 API 연동
+            const res = await fetch('/api/auth/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: form.userId,      // 로그인 아이디(문자열 PK)
+                    name: form.name,
+                    phone: form.phone,          // "010-1234-5678" 형태 허용 (서버에서 숫자만 저장)
+                    password: form.password,
+                    email: undefined,           // 있으면 전송
+                    consents: [
+                        { termsId: String(privacy?.termsId) }, // 개인정보 처리방침
+                        { termsId: String(tos?.termsId) },     // 이용약관
+                    ],
+                    userAgent: navigator.userAgent,
+                }),
+            });
+            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json(); // { ok: true, userId: '...' }
             await new Promise((r) => setTimeout(r, 500));
             setOk(true);
-            setForm({ username: '', password: '', name: '', phone: '' });
+            setForm({ userId: '', password: '', name: '', phone: '' });
             setTouched({});
             setErrors({});
         } catch {
@@ -302,20 +341,20 @@ export default function SignUpPage() {
                             <form onSubmit={onSubmit} className="mt-6 space-y-4" noValidate>
                                 {/* 아이디 */}
                                 <div>
-                                    <label htmlFor="username" className="block text-sm font-medium text-slate-700">
+                                    <label htmlFor="userId" className="block text-sm font-medium text-slate-700">
                                         아이디
                                     </label>
                                     <input
-                                        id="username"
-                                        name="username"
-                                        value={form.username}
+                                        id="userId"
+                                        name="userId"
+                                        value={form.userId}
                                         onChange={onChange}
-                                        onBlur={() => setTouched((t) => ({ ...t, username: true }))}
+                                        onBlur={() => setTouched((t) => ({ ...t, userId: true }))}
                                         placeholder="영문+숫자, 30자 이하"
-                                        className={inputClass(Boolean(mergedErrors.username))}
+                                        className={inputClass(Boolean(mergedErrors.userId))}
                                     />
-                                    {mergedErrors.username && (
-                                        <p className="mt-1 text-xs text-red-600">{mergedErrors.username}</p>
+                                    {mergedErrors.userId && (
+                                        <p className="mt-1 text-xs text-red-600">{mergedErrors.userId}</p>
                                     )}
                                 </div>
 
@@ -388,7 +427,22 @@ export default function SignUpPage() {
                                     )}
                                 </div>
 
-                                {ok && <p className="text-sm text-emerald-600">회원가입이 완료되었습니다.</p>}
+                                {ok && (
+                                    <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-700">
+                                        회원가입이 완료되었습니다.
+                                        {typeof redirectIn === 'number' && redirectIn > 0 && (
+                                            <> {' '}<b>{redirectIn}</b>초 뒤 로그인 페이지로 이동합니다.</>
+                                        )}
+                                        {' '}
+                                        <button
+                                            type="button"
+                                            onClick={() => router.push('/user/login')}
+                                            className="ml-2 underline hover:no-underline"
+                                        >
+                                            지금 이동
+                                        </button>
+                                    </div>
+                                )}
                                 {mergedErrors.global && (
                                     <p className="text-sm text-red-600">{mergedErrors.global}</p>
                                 )}
@@ -403,7 +457,7 @@ export default function SignUpPage() {
                                     </button>
                                     <button
                                         type="submit"
-                                        disabled={submitting}
+                                        disabled={submitting || ok}
                                         className="w-2/3 rounded-2xl bg-indigo-600 py-3 text-white font-semibold shadow hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
                                     >
                                         {submitting ? '처리 중…' : '가입하기'}
@@ -415,7 +469,7 @@ export default function SignUpPage() {
                 </div>
 
                 <div className="mt-6 text-center text-xs text-slate-400">
-                    © {new Date().getFullYear()} Your Company
+                    © {new Date().getFullYear()} 은혜와평강교회
                 </div>
             </section>
         </main>
