@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import {useState} from 'react';
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -13,7 +13,7 @@ export default function LoginPage() {
     const [error, setError] = useState('');
     const [ok, setOk] = useState(false);
 
-    const onChange = (e) => {
+    const onChange = (e:any) => {
         const { name, value } = e.target;
         setForm((f) => ({ ...f, [name]: value }));
     };
@@ -30,7 +30,7 @@ export default function LoginPage() {
         return '';
     };
 
-    const onSubmit = async (e) => {
+    const onSubmit = async (e:any) => {
         e.preventDefault();
         setError('');
         setOk(false);
@@ -44,15 +44,19 @@ export default function LoginPage() {
         try {
             setSubmitting(true);
             // 실제 API 연동 시 예:
-            // const res = await fetch('/api/auth/login', {
-            //   method: 'POST',
-            //   headers: { 'Content-Type': 'application/json' },
-            //   body: JSON.stringify(form),
-            // });
-            // if (!res.ok) throw new Error('로그인 실패');
-            await new Promise((r) => setTimeout(r, 500)); // 데모용
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form),
+            });
+            if (!res.ok) {
+                const m = await res.json().catch(() => ({}));
+                throw new Error(m.message ?? '로그인 실패');
+            }
             setOk(true);
-        } catch (err) {
+// next 파라미터 있으면 그리로, 없으면 홈
+            window.location.href = new URLSearchParams(window.location.search).get('next') ?? '/';
+        } catch (err:any) {
             setError(err.message || '오류가 발생했습니다.');
         } finally {
             setSubmitting(false);
