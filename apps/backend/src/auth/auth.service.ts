@@ -1,14 +1,23 @@
-import {BadRequestException, ConflictException, Injectable, NotFoundException} from "@nestjs/common";
+import {
+    BadRequestException,
+    ConflictException,
+    Injectable,
+    NotFoundException,
+    UnauthorizedException,
+} from '@nestjs/common';
 import {PrismaService} from "../../prisma/prisma.service";
 import {SignupRequestDto} from "./dto/signup.request.dto";
 import * as argon2 from 'argon2';
 import {terms_status} from "@prisma/client";
 import * as crypto from "crypto";
+import { JwtService } from '@nestjs/jwt';
+import * as process from 'node:process';
 
 @Injectable()
 export class AuthService {
-    constructor(private readonly prismaService: PrismaService) {}
+    constructor(private jwtService: JwtService, private readonly prismaService: PrismaService) {}
 
+    // 회원가입 및 약관 동의 저장
     async signupAndConsent(dto:SignupRequestDto) {
         const phoneDigits = this.normalizePhone(dto.phone);
         const passwordHash = await argon2.hash(dto.password);
@@ -91,5 +100,46 @@ export class AuthService {
             throw new BadRequestException('휴대폰 번호 길이가 올바르지 않습니다.');
         }
         return digits;
+    }
+
+    // 로그인
+    async login(userId:string, password:string) {
+        // 사용자 입력 데이터 검증
+        const user = await this.validateUser(userId, password);
+
+        // 토큰 발급
+        const { accessToken, refreshToken } = await this.signTokens(user);
+
+        // refreshToken 저장
+        await this.saveRefresh(user.userId, refreshToken);
+        return { user, accessToken, refreshToken };
+    }
+
+    // 사용자 검증
+    private async validateUser(userId: string, password: string) {
+        const user = await this.prismaService.user.findUnique({where: {userId}});
+        if (!user) throw new UnauthorizedException('아이디 또는 비밀번호가 일치하지 않습니다.');
+
+        const ok = await argon2.verify(user.passwordHash, password);
+        if (!ok) throw new UnauthorizedException('아이디 또는 비밀번호가 일치하지 않습니다.');
+
+        return user;
+    }
+
+    // 토큰
+    private async signTokens(user) {
+        const accessToken = await this.jwtService.signAsync(
+            { sub: user.id, username: user.userName, role: user.role, approval: user.approval },
+            { secret: process.env.JWT_ACCESS_SECRET, expiresIn: process.env.JWT_ACCESS_EXPIRES ?? '30m' }
+        );
+        const refreshToken = await this.jwtService.signAsync(
+            { sub: user.id, jti: crypto.randomUUID() },
+            { secret: process.env.JWT_REFRESH_SECRET, expiresIn: process.env.JWT_REFRESH_EXPIRES ?? '30d' },
+        );
+        return { accessToken, refreshToken };
+    }
+
+    private async saveRefresh(userId: string, refreshToken: string) {
+        const hash = await
     }
 }

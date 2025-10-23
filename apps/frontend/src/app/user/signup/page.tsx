@@ -65,7 +65,7 @@ export default function SignUpPage() {
             setTermsError(null);
             try {
                 const res = await fetch(
-                    '/api/terms/latest?slugs=privacy,tos&locale=ko-KR',
+                    '/server-api/terms/latest?slugs=privacy,tos&locale=ko-KR',
                     { cache: 'no-store' } // 항상 최신본
                 );
                 if (!res.ok) throw new Error('약관을 불러오지 못했습니다.');
@@ -206,7 +206,7 @@ export default function SignUpPage() {
         try {
             setSubmitting(true);
             // 실제 API 연동
-            const res = await fetch('/api/auth/signup', {
+            const res = await fetch('/server-api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

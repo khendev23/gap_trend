@@ -17,7 +17,7 @@ export default function KellyBoard() {
     const [error, setError] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState<boolean>(true);
 
-    // 🔸 모달 상태 (선택 이미지)
+    // 모달 상태 (선택 이미지)
     const [selected, setSelected] = useState<KellyItem | null>(null);
 
     const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -33,7 +33,7 @@ export default function KellyBoard() {
         try {
             const base = API_BASE ? API_BASE.replace(/\/+$/, "") : "";
             const qs = new URLSearchParams({ limit: "6", ...(cursor ? { cursor } : {}) });
-            const url = `/api/kelly/list?${qs.toString()}`;
+            const url = `/server-api/kelly/list?${qs.toString()}`;
 
             const res = await fetch(url, { cache: "no-store" });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -84,7 +84,7 @@ export default function KellyBoard() {
         return () => io.disconnect();
     }, [hasMore, nextCursor, loading]);
 
-    // 🔸 ESC로 모달 닫기
+    // ESC로 모달 닫기
     useEffect(() => {
         if (!selected) return;
         const onKey = (e: KeyboardEvent) => {
@@ -147,7 +147,7 @@ export default function KellyBoard() {
                         <div className="columns-2 gap-4 sm:columns-3">
                             {items.map((item) => (
                                 <div key={item.id} className="mb-4 break-inside-avoid">
-                                    {/* 🔸 모달 오픈 버튼 */}
+                                    {/* 모달 오픈 버튼 */}
                                     <button
                                         onClick={() => setSelected(item)}
                                         className="block w-full overflow-hidden rounded-xl shadow-sm hover:opacity-90"
@@ -174,7 +174,7 @@ export default function KellyBoard() {
                 )}
             </main>
 
-            {/* 🔸 모달 (다운로드 버튼 포함) */}
+            {/* 모달 (다운로드 버튼 포함) */}
             {selected && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
@@ -201,7 +201,7 @@ export default function KellyBoard() {
                         </div>
                         <div className="flex items-center justify-between p-4 border-t">
                             <a
-                                href={`/api/kelly/${selected.id}/download`}
+                                href={`/server-api/kelly/${selected.id}/download`}
                                 className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
                             >
                                 다운로드

@@ -42,7 +42,7 @@ export default function AnnounceMenu() {
             try {
                 setLoading(true);
                 // 같은 도메인 라우트 핸들러(또는 Nest → 프록시)라면 상대 경로로 OK
-                const res = await fetch('/api/notices/latest', {
+                const res = await fetch('/server-api/notices/latest', {
                     signal: ctrl.signal,
                     cache: 'no-store', // 최신값 선호
                 });

@@ -47,6 +47,7 @@ export default function LoginPage() {
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials : "include",
                 body: JSON.stringify(form),
             });
             if (!res.ok) {
@@ -54,7 +55,8 @@ export default function LoginPage() {
                 throw new Error(m.message ?? '로그인 실패');
             }
             setOk(true);
-// next 파라미터 있으면 그리로, 없으면 홈
+
+            // next 파라미터 있으면 그리로, 없으면 홈
             window.location.href = new URLSearchParams(window.location.search).get('next') ?? '/';
         } catch (err:any) {
             setError(err.message || '오류가 발생했습니다.');
