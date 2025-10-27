@@ -1,11 +1,5 @@
 import {NextRequest, NextResponse} from "next/server";
-
-const ACCESS_TOKEN = 'access_token';
-const REFRESH_TOKEN = 'refresh_token';
-const cookieOpts = {
-    access: { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' as const, path: '/', maxAge: 60 * 60 * 2 },
-    refresh: { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' as const, path: '/api/auth', maxAge: 60 * 60 * 24 * 30 },
-}
+import { ACCESS_COOKIE, REFRESH_COOKIE, cookieOpts } from '@/app/lib/auth-cookies';
 
 export async function POST(req: NextRequest) {
     const body = await req.json();
@@ -26,8 +20,8 @@ export async function POST(req: NextRequest) {
     const data = await response.json();
 
     const resp = NextResponse.json({user: data.user});
-    resp.cookies.set(ACCESS_TOKEN, data.accessToken, cookieOpts.access);
-    resp.cookies.set(REFRESH_TOKEN, data.refreshToken, cookieOpts.refresh);
+    resp.cookies.set(ACCESS_COOKIE, data.accessToken, cookieOpts.access);
+    resp.cookies.set(REFRESH_COOKIE, data.refreshToken, cookieOpts.refresh);
 
     return resp;
 }

@@ -1,6 +1,6 @@
 import {
     BadRequestException,
-    ConflictException,
+    ConflictException, ForbiddenException,
     Injectable,
     NotFoundException,
     UnauthorizedException,
@@ -10,7 +10,7 @@ import {SignupRequestDto} from "./dto/signup.request.dto";
 import * as argon2 from 'argon2';
 import {terms_status} from "@prisma/client";
 import * as crypto from "crypto";
-import { JwtService } from '@nestjs/jwt';
+import {JwtService, JwtSignOptions} from '@nestjs/jwt';
 import * as process from 'node:process';
 
 @Injectable()
@@ -127,19 +127,86 @@ export class AuthService {
     }
 
     // 토큰
-    private async signTokens(user) {
-        const accessToken = await this.jwtService.signAsync(
-            { sub: user.id, username: user.userName, role: user.role, approval: user.approval },
-            { secret: process.env.JWT_ACCESS_SECRET, expiresIn: process.env.JWT_ACCESS_EXPIRES ?? '30m' }
-        );
-        const refreshToken = await this.jwtService.signAsync(
-            { sub: user.id, jti: crypto.randomUUID() },
-            { secret: process.env.JWT_REFRESH_SECRET, expiresIn: process.env.JWT_REFRESH_EXPIRES ?? '30d' },
-        );
+    private async signTokens(user: any) {
+
+        type MsString =
+            | `${number}${'ms'|'s'|'m'|'h'|'d'}`
+            | `${number} ${'milliseconds'|'seconds'|'minutes'|'hours'|'days'}`;
+
+        const sub: string = user.userId;
+        const username: string = user.userName;
+        const role: string = user.role;
+        const approval: string = user.approval;
+
+        const accessPayload: Record<string, unknown> = { sub, username, role, approval };
+        const refreshPayload: Record<string, unknown> = { sub, jti:crypto.randomUUID() };
+
+        const ACCESS_EXPIRES: MsString = (process.env.JWT_ACCESS_EXPIRES ?? '30m') as MsString;
+        const REFRESH_EXPIRES: MsString = (process.env.JWT_REFRESH_EXPIRES ?? '30d') as MsString;
+
+        const accessOpts: JwtSignOptions = {
+            secret: process.env.JWT_ACCESS_SECRET,
+            expiresIn: ACCESS_EXPIRES
+        }
+
+        const refreshOpts: JwtSignOptions = {
+            secret: process.env.JWT_REFRESH_SECRET!,
+            expiresIn: REFRESH_EXPIRES
+        };
+
+        const accessToken: string = await this.jwtService.signAsync(accessPayload, accessOpts);
+        const refreshToken: string = await this.jwtService.signAsync(refreshPayload, refreshOpts);
+
         return { accessToken, refreshToken };
     }
 
     private async saveRefresh(userId: string, refreshToken: string) {
-        const hash = await
+        const hashed = await argon2.hash(refreshToken);
+        const ms = this.ttlMs(process.env.JWT_REFRESH_EXPIRES ?? '30d');
+        await this.prismaService.refreshToken.create({
+            data: {
+                userId,
+                token:hashed,
+                expiryDate: new Date(Date.now() + ms),
+            },
+        });
+    }
+
+    private ttlMs(expr: string) {
+        if (expr.endsWith('d')) return parseInt(expr) * 24 * 60 * 60 * 1000;
+        if (expr.endsWith('m')) return parseInt(expr) * 60 * 1000;
+        return 30 * 24 * 60 * 60 * 1000;
+    }
+
+    async rotate(userId: string, incomingRt: string) {
+        const list = await this.prismaService.refreshToken.findMany({
+            where: { userId }, orderBy: { createdAt: 'desc' }, take: 10,
+        });
+        const matched = await (async () => {
+            for (const t of list) {
+                if (await argon2.verify(incomingRt, t.token) && t.expiryDate > new Date()) return t;
+            }
+            return null;
+        })();
+        if (!matched) throw new ForbiddenException('리프레시 토큰 불가');
+        await this.prismaService.refreshToken.delete({ where: { tokenId: matched.tokenId } });
+
+        const user = await this.prismaService.user.findUnique({ where: { userId } });
+        const { accessToken, refreshToken } = await this.signTokens(user);
+        await this.saveRefresh(userId, refreshToken);
+        return { accessToken, refreshToken };
+    }
+
+    async logoutByRt(userId: string, incomingRt: string) {
+        if (incomingRt) {
+            const list = await this.prismaService.refreshToken.findMany({ where: { userId } });
+            for (const t of list) {
+                if (await argon2.verify(incomingRt, t.token)) {
+                    await this.prismaService.refreshToken.delete({ where: { tokenId: t.tokenId } });
+                    return;
+                }
+            }
+        }
+        await this.prismaService.refreshToken.deleteMany({ where: { userId } });
     }
 }
