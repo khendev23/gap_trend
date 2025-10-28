@@ -55,6 +55,7 @@ export default function LoginPage() {
                 throw new Error(m.message ?? '로그인 실패');
             }
             setOk(true);
+            console.log('로그인 성공')
 
             // next 파라미터 있으면 그리로, 없으면 홈
             window.location.href = new URLSearchParams(window.location.search).get('next') ?? '/';

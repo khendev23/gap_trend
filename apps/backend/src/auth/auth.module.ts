@@ -9,8 +9,8 @@ import { JwtAuthGuard } from './jwt.guard';
 import { PrismaModule } from '../../prisma/prisma.module';
 
 @Module({
-    providers: [PrismaService, AuthService],
-    imports: [JwtModule.register({}), JwtStrategy, JwtAuthGuard, PrismaModule],
+    providers: [PrismaService, AuthService, JwtStrategy, JwtAuthGuard],
+    imports: [JwtModule.register({}), PrismaModule],
     controllers: [AuthController],
 })
 export class AuthModule {}
