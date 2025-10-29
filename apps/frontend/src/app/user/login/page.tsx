@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export default function LoginPage() {
     const [form, setForm] = useState({
-        username: '',
+        userId: '',
         password: '',
     });
     const [showPw, setShowPw] = useState(false);
@@ -20,9 +20,9 @@ export default function LoginPage() {
 
     // 아이디 30자 이하, 비밀번호 8자 이상 + 특수문자 1개 이상
     const validate = () => {
-        const { username, password } = form;
-        if (!username.trim()) return '아이디를 입력해 주세요.';
-        if (username.length > 30) return '아이디는 30자 이하로 입력해 주세요.';
+        const { userId, password } = form;
+        if (!userId.trim()) return '아이디를 입력해 주세요.';
+        if (userId.length > 30) return '아이디는 30자 이하로 입력해 주세요.';
         const pwRegex = /^(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
         if (!pwRegex.test(password)) {
             return '비밀번호는 8자 이상이며, 특수문자를 최소 1개 포함해야 합니다.';
@@ -55,7 +55,6 @@ export default function LoginPage() {
                 throw new Error(m.message ?? '로그인 실패');
             }
             setOk(true);
-            console.log('로그인 성공')
 
             // next 파라미터 있으면 그리로, 없으면 홈
             window.location.href = new URLSearchParams(window.location.search).get('next') ?? '/';
@@ -82,15 +81,15 @@ export default function LoginPage() {
 
                     <form onSubmit={onSubmit} className="mt-6 space-y-4">
                         <div>
-                            <label htmlFor="username" className="block text-sm font-medium text-slate-700">
+                            <label htmlFor="userId" className="block text-sm font-medium text-slate-700">
                                 아이디
                             </label>
                             <input
-                                id="username"
-                                name="username"
-                                value={form.username}
+                                id="userId"
+                                name="userId"
+                                value={form.userId}
                                 onChange={onChange}
-                                autoComplete="username"
+                                autoComplete="userId"
                                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             />
                         </div>

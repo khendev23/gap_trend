@@ -159,8 +159,8 @@ model user {
 
 model refreshToken {
   tokenId    BigInt   @id @default(autoincrement()) @map("token_id")
-  userId     String   @map("user_id") @db.VarChar(30)
-  token      String   @unique(map: "uk_refresh_token") @map("refresh_token") @db.VarChar(255)
+  userId     String   @unique @map("user_id") @db.VarChar(30)
+  token      String   @map("refresh_token") @db.VarChar(255)
   expiryDate DateTime @map("expiry_date") @db.DateTime(0)
   createdAt  DateTime @default(now()) @map("created_at") @db.DateTime(0)
 

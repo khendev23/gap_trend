@@ -163,12 +163,11 @@ export class AuthService {
     private async saveRefresh(userId: string, refreshToken: string) {
         const hashed = await argon2.hash(refreshToken);
         const ms = this.ttlMs(process.env.JWT_REFRESH_EXPIRES ?? '30d');
-        await this.prismaService.refreshToken.create({
-            data: {
-                userId,
-                token:hashed,
-                expiryDate: new Date(Date.now() + ms),
-            },
+        const expiryDate = new Date(Date.now() + ms);
+        await this.prismaService.refreshToken.upsert({
+            where: { userId },
+            update: { token: hashed, expiryDate },
+            create: { userId, token: hashed, expiryDate },
         });
     }
 

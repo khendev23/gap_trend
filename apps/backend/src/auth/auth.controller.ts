@@ -1,10 +1,19 @@
 // src/auth/auth.controller.ts
-import { Body, Controller, Post, UnauthorizedException } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Get,
+    Post,
+    Req,
+    UnauthorizedException,
+    UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignupRequestDto } from './dto/signup.request.dto';
 import { SignupResponseDto } from './dto/signup.response.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
+import { JwtAuthGuard } from './jwt.guard';
 
 @Controller('api/auth')
 export class AuthController {
@@ -46,5 +55,14 @@ export class AuthController {
         if (!userId) throw new UnauthorizedException();
         await this.authService.logoutByRt(userId, rt);
         return { ok: true };
+    }
+
+    // 현재 로그인 사용자 정보
+    @UseGuards(JwtAuthGuard)
+    @Get('me')
+    me(@Req() req: any) {
+        // JwtStrategy.validate에서 return한 값이 req.user
+        // 예: { userId: 'khen', role: 'USER' }
+        return { user: req.user };
     }
 }

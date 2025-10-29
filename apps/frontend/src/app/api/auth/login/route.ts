@@ -3,14 +3,16 @@ import { ACCESS_COOKIE, REFRESH_COOKIE, cookieOpts } from '@/app/lib/auth-cookie
 
 export async function POST(req: NextRequest) {
     const body = await req.json();
+    const loginUrl = new URL('/server-api/auth/login', req.url);
 
-    const response = await fetch('/server-api/auth/login', {
+    const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
     });
+
 
     if (!response.ok) {
         const m = await response.json().catch(() => ({}));
