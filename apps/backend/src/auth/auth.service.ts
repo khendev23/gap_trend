@@ -1,17 +1,23 @@
 import {
     BadRequestException,
-    ConflictException, ForbiddenException,
+    ConflictException,
+    ForbiddenException,
     Injectable,
     NotFoundException,
     UnauthorizedException,
 } from '@nestjs/common';
-import {PrismaService} from "../../prisma/prisma.service";
-import {SignupRequestDto} from "./dto/signup.request.dto";
+import { PrismaService } from '../../prisma/prisma.service';
+import { SignupRequestDto } from './dto/signup.request.dto';
 import * as argon2 from 'argon2';
-import {terms_status} from "@prisma/client";
-import * as crypto from "crypto";
-import {JwtService, JwtSignOptions} from '@nestjs/jwt';
+import { terms_status } from '@prisma/client';
+import * as crypto from 'crypto';
+import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import * as process from 'node:process';
+import { formatInTimeZone } from 'date-fns-tz';
+
+type MsString =
+    | `${number}${'ms'|'s'|'m'|'h'|'d'}`
+    | `${number} ${'milliseconds'|'seconds'|'minutes'|'hours'|'days'}`;
 
 @Injectable()
 export class AuthService {
@@ -41,6 +47,7 @@ export class AuthService {
 
         try {
             const created = await this.prismaService.$transaction(async (tx) => {
+                await tx.$executeRawUnsafe(`SET time_zone = 'Asia/Seoul'`);
                 const user = await tx.user.create({
                     data: {
                         userId: dto.userId,
@@ -103,16 +110,45 @@ export class AuthService {
     }
 
     // 로그인
-    async login(userId:string, password:string) {
+    async login(userId:string, deviceId:string, password:string) {
         // 사용자 입력 데이터 검증
         const user = await this.validateUser(userId, password);
 
-        // 토큰 발급
-        const { accessToken, refreshToken } = await this.signTokens(user);
+        // 1) 해당 디바이스에 유효한 RT가 있는지 확인
+        const existing = await this.prismaService.refreshToken.findFirst({
+            where: { userId: user.userId, deviceId, revokedAt: null, expiryDate: { gt: new Date() } },
+        });
+
+        let refreshToken: string | undefined;
+
+        if (!existing) {
+            // 최초 발급(또는 만료된 경우)
+            const { token, jti } = await this.signRefresh(user.userId, deviceId);
+            const hashed = await argon2.hash(token);
+            const ms = this.ttlMs(process.env.JWT_REFRESH_EXPIRES ?? '30d');
+            const expiryUtc = new Date(Date.now() + ms); // 어떤 기준이어도 OK
+            const expiryKst = formatInTimeZone(expiryUtc, 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
+
+            await this.prismaService.$transaction(async (tx) => {
+                await tx.$executeRawUnsafe(`SET time_zone = 'Asia/Seoul'`);
+
+                await tx.refreshToken.upsert({
+                    where: { uq_user_device: { userId: userId, deviceId } },
+                    update: { token: hashed, expiryDate: expiryKst as any },
+                    create: { userId, token: hashed, expiryDate: expiryKst as any },
+                });
+            })
+
+            refreshToken = token; // 최초 발급일 때만 평문 반환(쿠키 세팅 등)
+        }
+
+        // 기존 유효 RT가 있으면 서버는 평문을 모르므로 재전달하지 않습니다.
+
+        // 2) ACCESS 토큰 발급
+        const accessToken: string = await this.signAccessTokens(user);
 
         // refreshToken 저장
-        await this.saveRefresh(user.userId, refreshToken);
-        return { user, accessToken, refreshToken };
+        return { user, accessToken, ...(refreshToken ? { refreshToken } : {}) };
     }
 
     // 사용자 검증
@@ -127,11 +163,7 @@ export class AuthService {
     }
 
     // 토큰
-    private async signTokens(user: any) {
-
-        type MsString =
-            | `${number}${'ms'|'s'|'m'|'h'|'d'}`
-            | `${number} ${'milliseconds'|'seconds'|'minutes'|'hours'|'days'}`;
+    private async signAccessTokens(user: any) {
 
         const sub: string = user.userId;
         const username: string = user.userName;
@@ -139,36 +171,28 @@ export class AuthService {
         const approval: string = user.approval;
 
         const accessPayload: Record<string, unknown> = { sub, username, role, approval };
-        const refreshPayload: Record<string, unknown> = { sub, jti:crypto.randomUUID() };
 
-        const ACCESS_EXPIRES: MsString = (process.env.JWT_ACCESS_EXPIRES ?? '30m') as MsString;
-        const REFRESH_EXPIRES: MsString = (process.env.JWT_REFRESH_EXPIRES ?? '30d') as MsString;
+        const ACCESS_EXPIRES: MsString = (process.env.JWT_ACCESS_EXPIRES ??
+            '30m') as MsString;
 
         const accessOpts: JwtSignOptions = {
             secret: process.env.JWT_ACCESS_SECRET,
             expiresIn: ACCESS_EXPIRES
-        }
-
-        const refreshOpts: JwtSignOptions = {
-            secret: process.env.JWT_REFRESH_SECRET!,
-            expiresIn: REFRESH_EXPIRES
         };
 
-        const accessToken: string = await this.jwtService.signAsync(accessPayload, accessOpts);
-        const refreshToken: string = await this.jwtService.signAsync(refreshPayload, refreshOpts);
-
-        return { accessToken, refreshToken };
+        return await this.jwtService.signAsync(accessPayload, accessOpts);
     }
 
-    private async saveRefresh(userId: string, refreshToken: string) {
-        const hashed = await argon2.hash(refreshToken);
-        const ms = this.ttlMs(process.env.JWT_REFRESH_EXPIRES ?? '30d');
-        const expiryDate = new Date(Date.now() + ms);
-        await this.prismaService.refreshToken.upsert({
-            where: { userId },
-            update: { token: hashed, expiryDate },
-            create: { userId, token: hashed, expiryDate },
-        });
+    private async signRefresh(userId: string, deviceId: string) {
+        const REFRESH_EXPIRES: MsString = (process.env.JWT_REFRESH_EXPIRES ?? '30d') as MsString;
+        const jti = crypto.randomUUID();
+        const payload = { sub: userId, jti, deviceId };
+        const refreshOpts: JwtSignOptions = {
+            secret: process.env.JWT_REFRESH_SECRET!,
+            expiresIn: REFRESH_EXPIRES,
+        };
+        const token = await this.jwtService.signAsync(payload, refreshOpts);
+        return { token, jti };
     }
 
     private ttlMs(expr: string) {
@@ -177,7 +201,7 @@ export class AuthService {
         return 30 * 24 * 60 * 60 * 1000;
     }
 
-    async rotate(userId: string, incomingRt: string) {
+    async rotate(userId: string, deviceId: string, incomingRt: string) {
         const list = await this.prismaService.refreshToken.findMany({
             where: { userId }, orderBy: { createdAt: 'desc' }, take: 10,
         });
@@ -192,7 +216,7 @@ export class AuthService {
 
         const user = await this.prismaService.user.findUnique({ where: { userId } });
         const { accessToken, refreshToken } = await this.signTokens(user);
-        await this.saveRefresh(userId, refreshToken);
+        await this.saveRefresh(userId, deviceId, refreshToken);
         return { accessToken, refreshToken };
     }
 

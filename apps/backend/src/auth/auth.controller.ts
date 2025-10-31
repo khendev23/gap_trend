@@ -26,7 +26,7 @@ export class AuthController {
 
     @Post('login')
     async login(@Body() dto: LoginDto) {
-        const { user, accessToken, refreshToken } = await this.authService.login(dto.userId, dto.password);
+        const { user, accessToken, refreshToken } = await this.authService.login(dto.userId, dto.deviceId, dto.password);
 
         return {
             user: { id:user.userId, username: user.name, role: user.role, approval: user.approvalStatus},
