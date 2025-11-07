@@ -110,7 +110,7 @@ export class AuthService {
     }
 
     // 로그인
-    async login(userId:string, deviceId:string, password:string) {
+    async login(userId:string, deviceId:string, password:string, currentRefreshToken?: string) {
         // 사용자 입력 데이터 검증
         const user = await this.validateUser(userId, password);
 
@@ -119,35 +119,50 @@ export class AuthService {
             where: { userId: user.userId, deviceId, revokedAt: null, expiryDate: { gt: new Date() } },
         });
 
-        let refreshToken: string | undefined;
-
+        let mustRotate = false;
         if (!existing) {
-            // 최초 발급(또는 만료된 경우)
-            const { token, jti } = await this.signRefresh(user.userId, deviceId);
-            const hashed = await argon2.hash(token);
-            const ms = this.ttlMs(process.env.JWT_REFRESH_EXPIRES ?? '30d');
-            const expiryUtc = new Date(Date.now() + ms); // 어떤 기준이어도 OK
-            const expiryKst = formatInTimeZone(expiryUtc, 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
-
-            await this.prismaService.$transaction(async (tx) => {
-                await tx.$executeRawUnsafe(`SET time_zone = 'Asia/Seoul'`);
-
-                await tx.refreshToken.upsert({
-                    where: { uq_user_device: { userId: userId, deviceId } },
-                    update: { token: hashed, expiryDate: expiryKst as any },
-                    create: { userId, token: hashed, expiryDate: expiryKst as any },
-                });
-            })
-
-            refreshToken = token; // 최초 발급일 때만 평문 반환(쿠키 세팅 등)
+            mustRotate = true;                      // DB에 유효 RT가 없으면 신규 발급
+        } else if (!currentRefreshToken) {
+            mustRotate = true;                      // 쿠키가 없으면 회전(정합성 복구)
+        } else {
+            const same = await argon2.verify(existing.tokenHash, currentRefreshToken).catch(() => false);
+            if (!same) mustRotate = true;           // 불일치 → 회전
         }
 
-        // 기존 유효 RT가 있으면 서버는 평문을 모르므로 재전달하지 않습니다.
+        let refreshToken: string | undefined;
 
-        // 2) ACCESS 토큰 발급
-        const accessToken: string = await this.signAccessTokens(user);
+        if (mustRotate) {
+            // 기존 레코드가 있으면 revoke
+            if (existing) {
+                await this.prismaService.refreshToken.update({
+                    where: { tokenId: existing.tokenId },
+                    data: { revokedAt: new Date() },
+                });
+            }
 
-        // refreshToken 저장
+            const { token, jti } = await this.signRefresh(user.userId, deviceId);
+            const hashed: string = await argon2.hash(token);
+
+            const ms: number = this.ttlMs(process.env.JWT_REFRESH_EXPIRES ?? '30d');
+            const expiryUtc = new Date(Date.now() + ms); // UTC 권장
+
+            await this.prismaService.refreshToken.upsert({
+                where: { userId_deviceId: { userId: user.userId, deviceId } },
+                update: { jti, tokenHash: hashed, expiryDate: expiryUtc, revokedAt: null },
+                create: { userId: user.userId, deviceId, jti, tokenHash: hashed, expiryDate: expiryUtc },
+            });
+
+            refreshToken = token; // 회전/신규 발급 시에만 평문 반환
+        } else {
+            // 정상 일치 → 감사 정보만 (선택)
+            await this.prismaService.refreshToken.update({
+                where: { tokenId: existing!.tokenId },
+                data: { lastUsedAt: new Date() },
+            });
+        }
+
+        const accessToken = await this.signAccessToken(user);
+
         return { user, accessToken, ...(refreshToken ? { refreshToken } : {}) };
     }
 
@@ -163,7 +178,7 @@ export class AuthService {
     }
 
     // 토큰
-    private async signAccessTokens(user: any) {
+    private async signAccessToken(user: any) {
 
         const sub: string = user.userId;
         const username: string = user.userName;
@@ -207,7 +222,7 @@ export class AuthService {
         });
         const matched = await (async () => {
             for (const t of list) {
-                if (await argon2.verify(incomingRt, t.token) && t.expiryDate > new Date()) return t;
+                if (await argon2.verify(await argon2.hash(incomingRt), t.tokenHash) && t.expiryDate > new Date()) return t;
             }
             return null;
         })();
@@ -224,7 +239,7 @@ export class AuthService {
         if (incomingRt) {
             const list = await this.prismaService.refreshToken.findMany({ where: { userId } });
             for (const t of list) {
-                if (await argon2.verify(incomingRt, t.token)) {
+                if (await argon2.verify(await argon2.hash(incomingRt), t.tokenHash)) {
                     await this.prismaService.refreshToken.delete({ where: { tokenId: t.tokenId } });
                     return;
                 }

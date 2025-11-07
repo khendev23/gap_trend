@@ -30,6 +30,15 @@ export default function LoginPage() {
         return '';
     };
 
+    function getDeviceType() {
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            return 'mobile';
+        } else if (window.matchMedia('(max-width: 1024px)').matches) {
+            return 'tablet';
+        }
+        return 'desktop';
+    }
+
     const onSubmit = async (e:any) => {
         e.preventDefault();
         setError('');
@@ -43,12 +52,15 @@ export default function LoginPage() {
 
         try {
             setSubmitting(true);
+
+            const deviceId = getDeviceType();
+
             // 실제 API 연동 시 예:
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials : "include",
-                body: JSON.stringify(form),
+                body: JSON.stringify({...form, deviceId}),
             });
             if (!res.ok) {
                 const m = await res.json().catch(() => ({}));

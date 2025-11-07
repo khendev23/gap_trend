@@ -39,7 +39,7 @@ export class AuthController {
     async refresh(@Body('refreshToken') rt: string) {
         if (!rt) throw new UnauthorizedException('refresh 누락');
         const decoded = await this.jwtService.verifyAsync(rt, { secret: process.env.JWT_REFRESH_SECRET });
-        const { accessToken, refreshToken } = await this.authService.rotate(decoded.sub, rt);
+        const { accessToken, refreshToken } = await this.authService.rotate(decoded.sub, decoded.deviceId, rt);
         return { accessToken, refreshToken };
     }
 

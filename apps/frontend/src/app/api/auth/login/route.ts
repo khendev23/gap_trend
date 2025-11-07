@@ -1,16 +1,19 @@
 import {NextRequest, NextResponse} from "next/server";
 import { ACCESS_COOKIE, REFRESH_COOKIE, cookieOpts } from '@/app/lib/auth-cookies';
+import {cookies} from "next/headers";
 
 export async function POST(req: NextRequest) {
     const body = await req.json();
     const loginUrl = new URL('/server-api/auth/login', req.url);
+    const currentRt = (await cookies()).get(REFRESH_COOKIE)?.value;
 
     const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, currentRefreshToken: currentRt }),
+        cache: 'no-store',
     });
 
 
