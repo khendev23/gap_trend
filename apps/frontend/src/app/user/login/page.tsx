@@ -2,6 +2,7 @@
 
 import {useState} from 'react';
 import Link from "next/link";
+import { getOrCreateDeviceId, detectDeviceType } from '@/app/lib/device';
 
 export default function LoginPage() {
     const [form, setForm] = useState({
@@ -30,15 +31,6 @@ export default function LoginPage() {
         return '';
     };
 
-    function getDeviceType() {
-        if (window.matchMedia('(max-width: 768px)').matches) {
-            return 'mobile';
-        } else if (window.matchMedia('(max-width: 1024px)').matches) {
-            return 'tablet';
-        }
-        return 'desktop';
-    }
-
     const onSubmit = async (e:any) => {
         e.preventDefault();
         setError('');
@@ -53,14 +45,15 @@ export default function LoginPage() {
         try {
             setSubmitting(true);
 
-            const deviceId = getDeviceType();
+            const deviceId = getOrCreateDeviceId();
+            const deviceType = detectDeviceType();
 
             // 실제 API 연동 시 예:
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials : "include",
-                body: JSON.stringify({...form, deviceId}),
+                body: JSON.stringify({...form, deviceId, deviceType}),
             });
             if (!res.ok) {
                 const m = await res.json().catch(() => ({}));

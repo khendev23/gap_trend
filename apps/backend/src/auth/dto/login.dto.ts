@@ -1,12 +1,18 @@
-import { IsString } from 'class-validator';
+import { IsBoolean, IsString } from 'class-validator';
 
 export class LoginDto {
     @IsString()
-    userId!: string;
+    userId: string;
 
     @IsString()
-    password!: string;
+    password: string;
 
     @IsString()
-    deviceId!: string;
+    deviceId: string;
+
+    @IsString()
+    deviceType: 'mobile'|'tablet'|'desktop';
+
+    @IsBoolean()
+    hadRtCookie?:boolean;
 }

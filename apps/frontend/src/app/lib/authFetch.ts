@@ -23,7 +23,12 @@ export async function authFetch(
     options: RequestInit = {},
     isTokenExpired?: (res: Response) => boolean
 ): Promise<{ res: Response; refreshSetCookies: string[] }> {
-    const first = await fetch(url, { ...options, cache: 'no-store' });
+    const baseOpts: RequestInit = {
+        ...options,
+        cache: 'no-store' as RequestCache, // 또는 'no-store' as const
+    };
+
+    const first = await fetch(url, baseOpts);
 
     if (first.ok) {
         return { res: first, refreshSetCookies: [] };
@@ -51,8 +56,24 @@ export async function authFetch(
         };
     }
 
+    const mergedCookie = mergeCookieHeader(
+        options.headers as HeadersInit,
+        req.headers.get('cookie') ?? '',
+        refreshResult.setCookies
+    );
+
+    // ✅ HeadersInit → Headers 로 정규화
+    const retryHeaders = new Headers(options.headers as HeadersInit | undefined);
+
+    // 새 쿠키 반영
+    retryHeaders.set('Cookie', mergedCookie);
+
+    // (옵션) Bearer도 갱신
+    const newAccess = extractCookieValue(refreshResult.setCookies, 'access_token');
+    if (newAccess) retryHeaders.set('Authorization', `Bearer ${newAccess}`);
+
     // 리프레시 성공 → 원요청 1회 재시도
-    const retry = await fetch(url, { ...options, cache: 'no-store' });
+    const retry = await fetch(url, { ...baseOpts, headers: retryHeaders });
     return { res: retry, refreshSetCookies: refreshResult.setCookies };
 }
 
@@ -94,4 +115,52 @@ function collectSetCookieHeaders(res: Response): string[] {
         if (k.toLowerCase() === 'set-cookie') out.push(v);
     });
     return out;
+}
+
+function mergeCookieHeader(
+    originalHeaders: HeadersInit | undefined,
+    originalCookieHeader: string,
+    setCookies: string[]
+): string {
+    // 원래 요청의 Cookie 헤더를 Key-Value로 파싱
+    const jar: Record<string, string> = parseCookieHeader(originalCookieHeader);
+
+    // 새 Set-Cookie 들을 반영 (만료된 건 무시, 새 값만 덮어씀)
+    for (const sc of setCookies) {
+        const { name, value } = parseSetCookie(sc);
+        if (name) jar[name] = value ?? '';
+    }
+
+    // 다시 "Cookie: a=1; b=2" 형태로 직렬화
+    return Object.entries(jar)
+        .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+        .join('; ');
+}
+
+function parseCookieHeader(header: string): Record<string, string> {
+    const out: Record<string, string> = {};
+    header.split(';').forEach((kv) => {
+        const [k, ...rest] = kv.trim().split('=');
+        if (!k) return;
+        out[k] = decodeURIComponent(rest.join('=') ?? '');
+    });
+    return out;
+}
+
+function parseSetCookie(sc: string): { name: string; value: string | null } {
+    // "name=value; Path=/; HttpOnly; ..." 에서 name/value만 추출
+    const first = sc.split(';')[0];
+    const eq = first.indexOf('=');
+    if (eq < 0) return { name: '', value: null };
+    const name = first.slice(0, eq).trim();
+    const value = first.slice(eq + 1).trim();
+    return { name, value };
+}
+
+function extractCookieValue(setCookies: string[], target: string): string | null {
+    for (const sc of setCookies) {
+        const { name, value } = parseSetCookie(sc);
+        if (name === target) return value ?? null;
+    }
+    return null;
 }
