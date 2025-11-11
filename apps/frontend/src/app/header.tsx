@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import HeaderMenu from "@/component/main/ts/headerMenu"; // ⬅️ 네가 쓰던 모바일 사이드 메뉴
+import HeaderMenu from "@/component/main/ts/headerMenu";
 
 type MegaItem = { label: string; href: string; desc?: string };
 type MegaGroup = { title: string; items: MegaItem[] };
@@ -95,7 +95,20 @@ const NAV: Array<{
     },
 ];
 
-export default function Header() {
+type User = {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    isAdmin: boolean;
+};
+
+type AppHeaderProps = {
+    user: User;
+};
+
+export default function Header({user}: AppHeaderProps) {
+
     // 모바일 사이드 메뉴
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -137,13 +150,35 @@ export default function Header() {
             <header className="fixed inset-x-0 top-0 z-40 bg-white border-b border-gray-100 pt-[env(safe-area-inset-top)] h-14 md:h-16">
                 <div className="mx-auto max-w-6xl h-full px-3 md:px-4 flex items-center justify-between">
                     {/* 좌: 로그인 */}
-                    <Link
-                        href="/user/login"
-                        className="flex items-center justify-center w-10 h-10 text-black"
-                        aria-label="로그인"
-                    >
-                        <UserIcon className="h-6 w-6" />
-                    </Link>
+                    {user ? (
+                            <>
+                                <span className="text-gray-700 text-sm">
+                                    {user.name ?? "사용자"}님 환영합니다
+                                </span>
+                                <button
+                                    // onClick={handleLogout}
+                                    className="text-sm text-gray-500 hover:text-red-600 transition"
+                                    title="내정보"
+                                >
+                                    🚪 내정보
+                                </button>
+                                <button
+                                    // onClick={handleLogout}
+                                    className="text-sm text-gray-500 hover:text-red-600 transition"
+                                    title="로그아웃"
+                                >
+                                    🚪 로그아웃
+                                </button>
+                            </>
+                    ) : (
+                        <Link
+                            href="/user/login"
+                            className="flex items-center justify-center w-10 h-10 text-black"
+                            aria-label="로그인"
+                        >
+                            <UserIcon className="h-6 w-6" />
+                        </Link>
+                    )}
 
                     {/* 중앙: 로고 */}
                     <div className="absolute left-1/2 transform -translate-x-1/2">

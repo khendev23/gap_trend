@@ -139,12 +139,12 @@ export default function MobileBulletinBoard() {
                                         <h2 className="text-base font-semibold leading-6">
                                             {p.isNotice && (
                                                 <span className="mr-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 align-middle">
-                          NOTICE
-                        </span>
+                                                  NOTICE
+                                                </span>
                                             )}
                                             <span className="align-middle line-clamp-1">
-                        {p.title}
-                      </span>
+                                            {p.title}
+                                          </span>
                                         </h2>
                                         <p className="mt-1 line-clamp-2 text-sm text-gray-600">
                                             {p.body}
