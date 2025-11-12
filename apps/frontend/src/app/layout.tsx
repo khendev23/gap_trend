@@ -24,13 +24,13 @@ export default async function RootLayout({children}: Readonly<{children: React.R
     const user = await getUserFromCookie();
 
     return (
-        <html lang="en">
+        <html lang="kr">
             <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-            <Header user={user}/>
-            <main>
-                {children}
-            </main>
-            <Footer />
+                <Header user={user}/>
+                    <main>
+                        {children}
+                    </main>
+                <Footer />
             </body>
         </html>
     );

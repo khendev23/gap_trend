@@ -206,7 +206,8 @@ export default function SignUpPage() {
         try {
             setSubmitting(true);
             // 실제 API 연동
-            const res = await fetch('/server-api/auth/signup', {
+            const res = await fetch(
+                '/server-api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

@@ -54,7 +54,6 @@ export class AuthService {
         try {
             const created = await this.prismaService.$transaction(
                 async (tx) => {
-                    await tx.$executeRawUnsafe(`SET time_zone = 'Asia/Seoul'`);
                     const user = await tx.user.create({
                         data: {
                             userId: dto.userId,
@@ -151,7 +150,6 @@ export class AuthService {
         userId: string,
         password: string,
         deviceId: string,
-        deviceType: string,
         hadRtCookie: boolean | undefined,
     ) {
         // 사용자 입력 데이터 검증

@@ -10,9 +10,6 @@ export class LoginDto {
     @IsString()
     deviceId: string;
 
-    @IsString()
-    deviceType: 'mobile'|'tablet'|'desktop';
-
     @IsBoolean()
     hadRtCookie?:boolean;
 }

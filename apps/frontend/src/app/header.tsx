@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import HeaderMenu from "@/component/main/ts/headerMenu";
+import {router} from "next/client";
 
 type MegaItem = { label: string; href: string; desc?: string };
 type MegaGroup = { title: string; items: MegaItem[] };
@@ -95,16 +96,14 @@ const NAV: Array<{
     },
 ];
 
-type User = {
-    id: number;
-    name: string;
-    email: string;
-    role: string;
-    isAdmin: boolean;
-};
+type AuthUser = {
+    id: string;
+    name?: string | null;
+    role?: string | null;
+} | null;
 
 type AppHeaderProps = {
-    user: User;
+    user: AuthUser;
 };
 
 export default function Header({user}: AppHeaderProps) {
@@ -151,25 +150,25 @@ export default function Header({user}: AppHeaderProps) {
                 <div className="mx-auto max-w-6xl h-full px-3 md:px-4 flex items-center justify-between">
                     {/* 좌: 로그인 */}
                     {user ? (
-                            <>
-                                <span className="text-gray-700 text-sm">
-                                    {user.name ?? "사용자"}님 환영합니다
-                                </span>
-                                <button
-                                    // onClick={handleLogout}
-                                    className="text-sm text-gray-500 hover:text-red-600 transition"
-                                    title="내정보"
-                                >
-                                    🚪 내정보
-                                </button>
-                                <button
-                                    // onClick={handleLogout}
-                                    className="text-sm text-gray-500 hover:text-red-600 transition"
-                                    title="로그아웃"
-                                >
-                                    🚪 로그아웃
-                                </button>
-                            </>
+                        <>
+                            <span className="text-gray-700 text-sm">
+                                {user.name ?? "사용자"} 성도님 환영합니다
+                            </span>
+                            <button
+                                onClick={() => router.push("/mypage")}
+                                className="text-sm px-3 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition"
+                                title="내정보"
+                            >
+                                ⚙️ 내정보
+                            </button>
+                            <button
+                                // onClick={handleLogout}
+                                className="text-sm px-3 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition"
+                                title="로그아웃"
+                            >
+                                🚪 로그아웃
+                            </button>
+                        </>
                     ) : (
                         <Link
                             href="/user/login"

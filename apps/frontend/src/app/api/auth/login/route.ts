@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const ua = hdrs.get('user-agent') ?? '';
 
     const deviceId = body.deviceId ?? didCookie ?? crypto.randomUUID(); // 최후 보정
-    const deviceType = body.deviceType ?? serverDetectDeviceType(ua);
+    // const deviceType = body.deviceType ?? serverDetectDeviceType(ua);
 
     const loginUrl = new URL('/server-api/auth/login', req.url);
 
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ...body, deviceId, deviceType, hadRtCookie }),
+        body: JSON.stringify({ ...body, deviceId, hadRtCookie }),
         cache: 'no-store',
     });
 

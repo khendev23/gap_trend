@@ -46,14 +46,14 @@ export default function LoginPage() {
             setSubmitting(true);
 
             const deviceId = getOrCreateDeviceId();
-            const deviceType = detectDeviceType();
+            // const deviceType = detectDeviceType();
 
             // 실제 API 연동 시 예:
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials : "include",
-                body: JSON.stringify({...form, deviceId, deviceType}),
+                body: JSON.stringify({...form, deviceId}),
             });
             if (!res.ok) {
                 const m = await res.json().catch(() => ({}));
