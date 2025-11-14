@@ -5,7 +5,6 @@ import Link from 'next/link';
 
 type TabKey = 'announceMenu' | 'newsMenu';
 
-// 백엔드 응답 아이템 타입(필요 시 필드명 맞춰 조정)
 type NoticeItem = {
     id: string | number;
     title: string;
@@ -27,12 +26,11 @@ export default function AnnounceMenu() {
     // 날짜 포맷: 'YY.MM.DD'
     const fmt = (iso?: string) => {
         if (!iso) return '';
-        const d = new Date()
+        const d = new Date(iso); // ← 이게 더 정확합니다.
         const yy = String(d.getFullYear()).slice(-2);
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
         return `${yy}.${mm}.${dd}`;
-        // 필요하면 한국시간 보정: new Date(new Date(iso).getTime() + 9*60*60*1000)
     };
 
     useEffect(() => {
@@ -41,21 +39,18 @@ export default function AnnounceMenu() {
         (async () => {
             try {
                 setLoading(true);
-                // 같은 도메인 라우트 핸들러(또는 Nest → 프록시)라면 상대 경로로 OK
                 const res = await fetch('/server-api/notices/latest', {
                     signal: ctrl.signal,
-                    cache: 'no-store', // 최신값 선호
+                    cache: 'no-store',
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = (await res.json()) as HomeLists;
 
-                // 방어적 가드 + 최대 5개 제한
                 setLists({
                     notice: Array.isArray(data?.notice) ? data.notice.slice(0, 5) : [],
                     news: Array.isArray(data?.news) ? data.news.slice(0, 5) : [],
                 });
             } catch (err) {
-                // AbortError는 조용히 무시
                 if ((err as any)?.name !== 'AbortError') {
                     console.error(err);
                 }
@@ -64,82 +59,189 @@ export default function AnnounceMenu() {
             }
         })();
 
-        // 언마운트 시 요청 취소
         return () => ctrl.abort();
     }, []);
 
-    // 현재 탭에 맞는 데이터 선택
+    // 모바일에서 탭에 맞는 데이터
     const current =
         selectedMenu === 'announceMenu' ? lists.notice : lists.news;
 
     return (
-        <section className="w-screen min-h-[30vh] bg-[#FDF2F0]">
-            {/* 상단 타이틀/탭 */}
-            <div className="text-black flex items-center justify-between px-6 md:px-12 pt-4">
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setSelectedMenu('announceMenu')}
-                        className={`text-base md:text-lg font-semibold pb-1 ${
-                            isActive('announceMenu')
-                                ? 'text-black border-b-2 border-black'
-                                : 'text-gray-700'
-                        } transition-colors`}
-                    >
-                        공지사항
-                    </button>
-                    <span className="px-2">|</span>
-                    <button
-                        type="button"
-                        onClick={() => setSelectedMenu('newsMenu')}
-                        className={`text-base md:text-lg font-semibold pb-1 ${
-                            isActive('newsMenu')
-                                ? 'text-black border-b-2 border-black'
-                                : 'text-gray-700'
-                        } transition-colors`}
-                    >
-                        교회소식
-                    </button>
-                </div>
-
-                {/* 더보기: 라우트는 프로젝트에 맞게 조정 */}
-                <div className="text-sm md:text-base">
-                    <Link
-                        href={selectedMenu === 'announceMenu' ? '/notice' : '/news'}
-                        className="px-2 hover:underline"
-                    >
-                        더보기
-                    </Link>
-                </div>
-            </div>
-
-            {/* 리스트 */}
-            <div className="mt-2 text-black divide-y divide-black/10">
-                {loading ? (
-                    <div className="px-6 md:px-12 py-6 text-sm text-gray-600">
-                        불러오는 중…
-                    </div>
-                ) : current.length === 0 ? (
-                    <div className="px-6 md:px-12 py-6 text-sm text-gray-600">
-                        표시할 항목이 없습니다.
-                    </div>
-                ) : (
-                    current.map((item) => (
-                        <div
-                            key={item.id}
-                            className="flex items-center justify-between px-6 md:px-12 py-3"
-                        >
-                            <Link href={`/notice/${item.id}`}>
-                                <p className="contentsTitle text-[0.9rem] md:text-base truncate pr-3">
-                                    {item.title}
-                                </p>
-                            </Link>
-                            <p className="contentsDate text-[0.7rem] md:text-sm shrink-0 text-gray-700">
-                                {fmt(item.createdAt)}
-                            </p>
+        <section className="w-screen min-h-[30vh] bg-[#FFF7F5]">
+            <div className="w-full max-w-5xl mx-auto md:px-0">
+                {/* =================== 모바일 버전: 탭 전환 =================== */}
+                <div className="md:hidden">
+                    {/* 상단 타이틀/탭 */}
+                    <div className="text-black flex items-center justify-between px-6 pt-4">
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedMenu('announceMenu')}
+                                className={`text-base font-semibold pb-1 ${
+                                    isActive('announceMenu')
+                                        ? 'text-black border-b-2 border-black'
+                                        : 'text-gray-700'
+                                } transition-colors`}
+                            >
+                                공지사항
+                            </button>
+                            <span className="px-2">|</span>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedMenu('newsMenu')}
+                                className={`text-base font-semibold pb-1 ${
+                                    isActive('newsMenu')
+                                        ? 'text-black border-b-2 border-black'
+                                        : 'text-gray-700'
+                                } transition-colors`}
+                            >
+                                교회소식
+                            </button>
                         </div>
-                    ))
-                )}
+
+                        <div className="text-sm">
+                            <Link
+                                href={
+                                    selectedMenu === 'announceMenu'
+                                        ? '/notice'
+                                        : '/news'
+                                }
+                                className="px-2 hover:underline"
+                            >
+                                더보기
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* 리스트 */}
+                    <div className="mt-2 text-black divide-y divide-black/10">
+                        {loading ? (
+                            <div className="px-6 py-6 text-sm text-gray-600">
+                                불러오는 중…
+                            </div>
+                        ) : current.length === 0 ? (
+                            <div className="px-6 py-6 text-sm text-gray-600">
+                                표시할 항목이 없습니다.
+                            </div>
+                        ) : (
+                            current.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="flex items-center justify-between px-6 py-3"
+                                >
+                                    <Link
+                                        href={
+                                            selectedMenu === 'announceMenu'
+                                                ? `/notice/${item.id}`
+                                                : `/news/${item.id}`
+                                        }
+                                        className="flex-1"
+                                    >
+                                        <p className="contentsTitle text-[0.9rem] truncate pr-3">
+                                            {item.title}
+                                        </p>
+                                    </Link>
+                                    <p className="contentsDate text-[0.7rem] shrink-0 text-gray-700">
+                                        {fmt(item.createdAt)}
+                                    </p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                {/* =================== 데스크탑 버전: 두 그룹 나란히 =================== */}
+                <div className="hidden md:grid grid-cols-2 gap-8 py-8">
+                    {loading ? (
+                        <div className="col-span-2 text-sm text-gray-600">
+                            불러오는 중…
+                        </div>
+                    ) : (
+                        <>
+                            {/* 공지사항 컬럼 */}
+                            <div className="rounded-2xl bg-[#FDF2F0] px-6 py-5 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-lg font-semibold text-black">
+                                        공지사항
+                                    </h2>
+                                    <Link
+                                        href="/notice"
+                                        className="text-sm text-gray-700 hover:underline"
+                                    >
+                                        더보기
+                                    </Link>
+                                </div>
+                                <div className="divide-y divide-black/10">
+                                    {lists.notice.length === 0 ? (
+                                        <div className="py-4 text-sm text-gray-600">
+                                            표시할 공지사항이 없습니다.
+                                        </div>
+                                    ) : (
+                                        lists.notice.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className="flex items-center justify-between py-2"
+                                            >
+                                                <Link
+                                                    href={`/notice/${item.id}`}
+                                                    className="flex-1"
+                                                >
+                                                    <p className="contentsTitle text-sm md:text-base truncate pr-3">
+                                                        {item.title}
+                                                    </p>
+                                                </Link>
+                                                <p className="contentsDate text-xs md:text-sm shrink-0 text-gray-700">
+                                                    {fmt(item.createdAt)}
+                                                </p>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 교회소식 컬럼 */}
+                            <div className="rounded-2xl bg-[#FBE4DE] px-6 py-5 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-lg font-semibold text-black">
+                                        교회소식
+                                    </h2>
+                                    <Link
+                                        href="/news"
+                                        className="text-sm text-gray-700 hover:underline"
+                                    >
+                                        더보기
+                                    </Link>
+                                </div>
+                                <div className="divide-y divide-black/10">
+                                    {lists.news.length === 0 ? (
+                                        <div className="py-4 text-sm text-gray-600">
+                                            표시할 교회소식이 없습니다.
+                                        </div>
+                                    ) : (
+                                        lists.news.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className="flex items-center justify-between py-2"
+                                            >
+                                                <Link
+                                                    href={`/news/${item.id}`}
+                                                    className="flex-1"
+                                                >
+                                                    <p className="contentsTitle text-sm md:text-base truncate pr-3">
+                                                        {item.title}
+                                                    </p>
+                                                </Link>
+                                                <p className="contentsDate text-xs md:text-sm shrink-0 text-gray-700">
+                                                    {fmt(item.createdAt)}
+                                                </p>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
         </section>
     );

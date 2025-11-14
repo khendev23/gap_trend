@@ -4,14 +4,14 @@ export default function MiddleMenu() {
     return (
         <section
             className="
-        w-screen bg-[#f9f9f9]
-        px-6 py-6 md:px-8 md:py-8
-        flex items-center justify-center
-        /* 원래 height:25vh → 모바일은 내용 높이에 맞추고 md부터 근사치 */
-        min-h-[18vh] md:min-h-[25vh]
-      "
+            w-screen bg-[#f9f9f9]
+            px-6 py-6 md:px-8 md:py-8
+            flex items-center justify-center
+            /* 원래 height:25vh → 모바일은 내용 높이에 맞추고 md부터 근사치 */
+            min-h-[18vh] md:min-h-[25vh]
+          "
         >
-            <div className="w-full max-w-screen-md">
+            <div className="w-full max-w-screen-md md:max-w-screen-lg">
                 {/* 상단 문구 */}
                 <div className="text-black text-sm md:text-base leading-6 md:leading-7">
                     <p>사도들이 전한 정통적 복음이 선포되고</p>
@@ -21,11 +21,11 @@ export default function MiddleMenu() {
                 {/* 아이콘 메뉴 (모바일 2열, md 이상 4열) */}
                 <div
                     className="
-            mt-4 md:mt-6
-            grid grid-cols-2 md:grid-cols-4
-            gap-x-8 gap-y-6 md:gap-x-12 md:gap-y-8
-            text-black
-          "
+                mt-4 md:mt-6
+                grid grid-cols-2 md:grid-cols-4
+                gap-x-8 gap-y-6 md:gap-x-12 md:gap-y-8
+                text-black
+              "
                 >
                     {/* 예배 */}
                     <div className="flex flex-col items-center justify-between">
