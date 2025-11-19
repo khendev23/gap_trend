@@ -15,7 +15,7 @@ async function getUser() {
         const c = await cookies();
         const cookieHeader = c.getAll().map(({ name, value }) => `${name}=${value}`).join('; ');
 
-        console.log('[SSR] cookie header =>', cookieHeader);
+        // console.log('[SSR] cookie header =>', cookieHeader);
 
         // 3) 서버에서 서버로 호출할 때 쿠키를 명시적으로 전달
         const res = await fetch(`${base}/api/auth/me`, {

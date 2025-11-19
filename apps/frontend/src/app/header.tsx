@@ -148,27 +148,33 @@ export default function Header({user}: AppHeaderProps) {
             {/* 고정 헤더 */}
             <header className="fixed inset-x-0 top-0 z-40 bg-white border-b border-gray-100 pt-[env(safe-area-inset-top)] h-14 md:h-16">
                 <div className="mx-auto max-w-6xl h-full px-3 md:px-4 flex items-center justify-between">
-                    {/* 좌: 로그인 */}
+                    {/* 좌: 로그인 / 유저 영역 */}
                     {user ? (
-                        <>
-                            <span className="text-gray-700 text-sm">
-                                {user.name ?? "사용자"} 성도님 환영합니다
-                            </span>
+                        <div className="flex items-center gap-2 max-w-[40vw]">
+                <span className="hidden sm:inline text-xs md:text-sm text-gray-700 truncate">
+                    {user.name ?? "사용자"} 성도님 환영합니다
+                </span>
+
+                            {/* 내정보 버튼 - 모바일에서는 아이콘만, 데스크탑에서만 텍스트 */}
                             <button
                                 onClick={() => router.push("/mypage")}
-                                className="text-sm px-3 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition"
+                                className="flex items-center justify-center rounded border border-blue-200 bg-blue-50 text-blue-600 text-xs md:text-sm px-2 md:px-3 py-1 hover:bg-blue-100 transition"
                                 title="내정보"
                             >
-                                ⚙️ 내정보
+                                <span className="md:hidden">⚙️</span>
+                                <span className="hidden md:inline">⚙️ 내정보</span>
                             </button>
+
+                            {/* 로그아웃 버튼 - 작은 원형 아이콘 느낌으로 */}
                             <button
                                 // onClick={handleLogout}
-                                className="text-sm px-3 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition"
+                                className="flex items-center justify-center w-8 h-8 md:w-auto md:px-3 md:py-1 rounded-full md:rounded bg-red-50 text-red-600 text-xs md:text-sm border border-red-200 hover:bg-red-100 transition"
                                 title="로그아웃"
                             >
-                                🚪 로그아웃
+                                <span className="md:hidden">🚪</span>
+                                <span className="hidden md:inline">🚪 로그아웃</span>
                             </button>
-                        </>
+                        </div>
                     ) : (
                         <Link
                             href="/user/login"
@@ -180,8 +186,8 @@ export default function Header({user}: AppHeaderProps) {
                     )}
 
                     {/* 중앙: 로고 */}
-                    <div className="absolute left-1/2 transform -translate-x-1/2">
-                        <Link href="/">
+                    <div className="absolute left-1/2 transform -translate-x-1/2 pointer-events-none">
+                        <Link href="/" className="pointer-events-auto">
                             <img
                                 src="https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/web/logo.jpeg"
                                 alt="홈으로 이동"
@@ -192,7 +198,6 @@ export default function Header({user}: AppHeaderProps) {
 
                     {/* 우: 모바일 햄버거 / 데스크탑 내비 */}
                     <div className="flex items-center gap-2">
-                        {/* 데스크탑 내비 + 메가 트리거 */}
                         <nav className="hidden md:flex items-center gap-1">
                             {NAV.map((m) =>
                                 m.groups ? (
@@ -231,7 +236,7 @@ export default function Header({user}: AppHeaderProps) {
                             )}
                         </nav>
 
-                        {/* 모바일 햄버거 (기존 HeaderMenu 연동) */}
+                        {/* 모바일 햄버거 */}
                         <button
                             type="button"
                             onClick={() => setMenuOpen(true)}
@@ -243,7 +248,6 @@ export default function Header({user}: AppHeaderProps) {
                     </div>
                 </div>
 
-                {/* 데스크탑 메가 메뉴 패널 */}
                 <MegaPanel
                     openKey={openKey}
                     onMouseEnter={() => {

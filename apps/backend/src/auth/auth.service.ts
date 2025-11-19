@@ -245,13 +245,13 @@ export class AuthService {
     // 토큰
     private async signAccessToken(user: any) {
         const sub: string = user.userId;
-        const username: string = user.userName;
+        const name: string = user.name;
         const role: string = user.role;
         const approval: string = user.approval;
 
         const accessPayload: Record<string, unknown> = {
             sub,
-            username,
+            name,
             role,
             approval,
         };

@@ -17,16 +17,16 @@ export default function WorshipMenu() {
                 {/* 가로 스크롤 래퍼 (모바일에서만 실제 스크롤) */}
                 <div
                     className="
-              mt-8 px-0 py-6
-              overflow-x-auto md:overflow-visible
-              whitespace-nowrap md:whitespace-normal
-              -webkit-overflow-scrolling-touch
-              scroll-smooth md:scroll-auto
-              snap-x snap-mandatory md:snap-none
-              /* 스크롤바 숨김 (모바일 위주) */
-              [-ms-overflow-style:none] [scrollbar-width:none]
-              [&::-webkit-scrollbar]:hidden
-            "
+                      mt-8 px-0 py-6
+                      overflow-x-auto md:overflow-visible
+                      whitespace-nowrap md:whitespace-normal
+                      -webkit-overflow-scrolling-touch
+                      scroll-smooth md:scroll-auto
+                      snap-x snap-mandatory md:snap-none
+                      /* 스크롤바 숨김 (모바일 위주) */
+                      [-ms-overflow-style:none] [scrollbar-width:none]
+                      [&::-webkit-scrollbar]:hidden
+                    "
                     aria-label="예배 카드 리스트"
                 >
                     {/* 카드 리스트 */}
@@ -39,10 +39,10 @@ export default function WorshipMenu() {
                             >
                                 <div
                                     className="
-                      shrink-0 w-[200px] md:w-full
-                      px-2 text-center text-black
-                      hover:opacity-90 transition
-                    "
+                                      shrink-0 w-[200px] md:w-full
+                                      px-2 text-center text-black
+                                      hover:opacity-90 transition
+                                    "
                                 >
                                     <img
                                         src="https://cdn.jsdelivr.net/gh/khendev23/gapCdn-assets@main/web/IMG_9462.JPG"

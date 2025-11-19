@@ -33,25 +33,25 @@ export default function HeaderMenu({ isOpen, closeAction }: HeaderMenuProps) {
             <div
                 onClick={closeAction}
                 className={`
-          fixed inset-0 z-[1000] md:hidden
-          bg-black/40 transition-opacity duration-300
-          ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}
-        `}
+                  fixed inset-0 z-[1000] md:hidden
+                  bg-black/40 transition-opacity duration-300
+                  ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}
+                `}
                 aria-hidden="true"
             />
 
             {/* 사이드 메뉴: 오른쪽에서 슬라이드 인/아웃 */}
             <aside
                 className={`
-          fixed top-0 right-0 z-[1001] md:hidden
-          w-[250px] h-dvh
-          bg-white text-black
-          shadow-[-2px_0_5px_rgba(0,0,0,0.2)]
-          p-5 overflow-y-auto
-          pt-[calc(env(safe-area-inset-top)+1rem)]
-          transform transition-transform duration-300 ease-out
-          ${isOpen ? "translate-x-0" : "translate-x-full"}
-        `}
+                  fixed top-0 right-0 z-[1001] md:hidden
+                  w-[250px] h-dvh
+                  bg-white text-black
+                  shadow-[-2px_0_5px_rgba(0,0,0,0.2)]
+                  p-5 overflow-y-auto
+                  pt-[calc(env(safe-area-inset-top)+1rem)]
+                  transform transition-transform duration-300 ease-out
+                  ${isOpen ? "translate-x-0" : "translate-x-full"}
+                `}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="mobile-menu-title"
