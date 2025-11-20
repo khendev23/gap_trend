@@ -18,8 +18,8 @@ model kellyImage {
   fileExtension    String   @map("file_extension") @db.VarChar(10)
   contentType      String   @map("content_type") @db.VarChar(100)
   fileSize         BigInt   @map("file_size")
-  createdAt        DateTime @default(now()) @map("created_at") @db.DateTime(0)
-  updatedAt        DateTime @default(now()) @map("updated_at") @db.DateTime(0)
+  createdAt        DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at") @db.DateTime(0)
+  updatedAt        DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @map("updated_at") @db.DateTime(0)
   deleted          Boolean  @default(false) @map("deleted")
   description      String?  @map("description") @db.VarChar(255)
 
@@ -35,7 +35,7 @@ model noticeAttachments {
   mimeType  String?  @map("mime_type") @db.VarChar(120)
   fileSize  Int?     @map("file_size")
   sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  createdAt DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at") @db.DateTime(0)
   notices   notices  @relation(fields: [noticeId], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_notice_attachments_notice")
 
   @@index([noticeId], map: "IX_notice_attach_notice")
@@ -48,8 +48,8 @@ model noticeCategories {
   name      String    @unique(map: "name") @map("name") @db.VarChar(80)
   slug      String    @unique(map: "slug") @map("slug") @db.VarChar(80)
   sortOrder Int       @default(0) @map("sort_order")
-  createdAt DateTime  @default(now()) @map("created_at") @db.DateTime(0)
-  updatedAt DateTime  @default(now()) @map("updated_at") @db.DateTime(0)
+  createdAt DateTime  @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at") @db.DateTime(0)
+  updatedAt DateTime  @default(dbgenerated("CURRENT_TIMESTAMP")) @map("updated_at") @db.DateTime(0)
   notices   notices[]
 
   @@map("notice_categories")
@@ -63,8 +63,8 @@ model notices {
   author            String?             @map("author") @db.VarChar(255)
   categoryId        BigInt              @map("category_id")
   visibility        notices_visibility  @default(PUBLIC) @map("visibility")
-  createdAt         DateTime            @default(now()) @map("created_at") @db.DateTime(0)
-  updatedAt         DateTime            @default(now()) @map("updated_at") @db.DateTime(0)
+  createdAt         DateTime            @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at") @db.DateTime(0)
+  updatedAt         DateTime            @default(dbgenerated("CURRENT_TIMESTAMP")) @map("updated_at") @db.DateTime(0)
   deletedAt         DateTime?           @map("deleted_at") @db.DateTime(0)
   noticeAttachments noticeAttachments[]
   noticeCategories  noticeCategories    @relation(fields: [categoryId], references: [id], onUpdate: Restrict, map: "fk_notices_category")
@@ -86,8 +86,8 @@ model worship {
   worshipType String   @map("worship_type") @db.VarChar(50)
   isPublic    Boolean  @default(true) @map("is_public")
   description String?  @map("description") @db.Text
-  createdAt   DateTime @default(now()) @map("created_at") @db.DateTime(0)
-  updatedAt   DateTime @default(now()) @map("updated_at") @db.DateTime(0)
+  createdAt   DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at") @db.DateTime(0)
+  updatedAt   DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @map("updated_at") @db.DateTime(0)
 
   @@index([worshipDate], map: "idx_worship_date")
   @@map("worship")
@@ -103,7 +103,7 @@ model worshipImage {
   fileExtension    String   @map("file_extension") @db.VarChar(10)
   contentType      String   @map("content_type") @db.VarChar(100)
   fileSize         BigInt   @map("file_size")
-  createdAt        DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  createdAt        DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at") @db.DateTime(0)
   deleted          Boolean  @default(false) @map("deleted")
   description      String?  @map("description") @db.VarChar(255)
 
@@ -165,7 +165,7 @@ model refreshToken {
   tokenHash String @map("token_hash") @db.VarChar(255)
 
   expiryDate DateTime  @map("expiry_date") @db.DateTime(0)
-  createdAt  DateTime  @default(now()) @map("created_at") @db.DateTime(0)
+  createdAt  DateTime  @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at") @db.DateTime(0)
   lastUsedAt DateTime? @map("last_used_at") @db.DateTime(0)
   revokedAt  DateTime? @map("revoked_at") @db.DateTime(0)
 
@@ -188,8 +188,8 @@ model terms {
   contentHtml String?      @map("content_html") @db.MediumText // HTML 저장 시
   status      terms_status @map("status")
   effectiveAt DateTime     @map("effective_at") @db.DateTime(0)
-  createdAt   DateTime     @default(now()) @map("created_at") @db.DateTime(0)
-  updatedAt   DateTime     @default(now()) @map("updated_at") @db.DateTime(0)
+  createdAt   DateTime     @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at") @db.DateTime(0)
+  updatedAt   DateTime     @default(dbgenerated("CURRENT_TIMESTAMP")) @map("updated_at") @db.DateTime(0)
 
   // Relations
   consents userConsent[]
@@ -207,7 +207,7 @@ model userConsent {
   termsVersion    Int      @map("terms_version")
   contentHash     String?  @map("content_hash") @db.Char(64) // SHA-256 등
   contentSnapshot String?  @map("content_snapshot") @db.MediumText // 동의 당시 원문 스냅샷
-  consentedAt     DateTime @default(now()) @map("consented_at") @db.DateTime(0)
+  consentedAt     DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @map("consented_at") @db.DateTime(0)
 
   // Relations
   user  user  @relation(fields: [userId], references: [userId], onDelete: Cascade)
@@ -225,7 +225,7 @@ model phoneVerificationLog {
   verifiedAt DateTime? @map("verified_at") @db.DateTime(0)
   resultCode String?   @map("result_code") @db.VarChar(20)
   message    String?   @map("message") @db.VarChar(255)
-  createdAt  DateTime  @default(now()) @map("created_at") @db.DateTime(0)
+  createdAt  DateTime  @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at") @db.DateTime(0)
 
   @@index([phone], map: "idx_phone_verification_log_phone")
   @@map("phone_verification_log")

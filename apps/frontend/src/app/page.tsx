@@ -44,11 +44,11 @@ export default async function Home() {
             `}
         >
             {/* 히어로 섹션 */}
-            <section className="w-screen h-[70vh] md:h-auto md:mb-10">
+            <section className="w-screen min-h-[70vh] md:min-h-0 md:mb-10">
                 {/* 인사 텍스트 */}
                 <div className="w-screen relative text-black pt-4 pl-12 md:hidden">
                     <h6 className="text-[0.8rem] leading-5">
-                        {user ? `${user.sub}님` : '방문자님'}
+                        {user ? `${user.name}님` : '방문자님'}
                     </h6>
                     <h6 className="text-[0.8rem] leading-5">사랑하고 축복합니다.</h6>
                 </div>
