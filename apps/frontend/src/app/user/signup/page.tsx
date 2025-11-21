@@ -7,6 +7,7 @@ type FormState = {
     userId: string;
     password: string;
     name: string;
+    email: string;
     phone: string;
 };
 
@@ -18,6 +19,8 @@ const idRegexFinal = /^[a-zA-Z0-9]+$/; // 제출 시 필수
 const pwRegex = /^(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
 const nameRegexLive = /^[가-힣]*$/;
 const nameRegexFinal = /^[가-힣]+$/;
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const emailRegexFinal = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type TermsDoc = {
     termsId: string;
@@ -45,6 +48,7 @@ export default function SignUpPage() {
         userId: '',
         password: '',
         name: '',
+        email: '',
         phone: '',
     });
     const [errors, setErrors] = useState<FieldErrors>({});
@@ -53,6 +57,16 @@ export default function SignUpPage() {
     const [submitting, setSubmitting] = useState(false);
     const [ok, setOk] = useState(false);
     const [redirectIn, setRedirectIn] = useState<number | null>(null);
+
+    const [emailSending, setEmailSending] = useState(false);
+    const [emailSentMsg, setEmailSentMsg] = useState<string | null>(null);
+
+    const [emailVerifyRequested, setEmailVerifyRequested] = useState(false);    // 인증번호 입력칸 노출 여부
+    const [emailCode, setEmailCode] = useState('');                             // 사용자가 입력한 인증번호
+    const [emailVerifying, setEmailVerifying] = useState(false);                // 인증번호 확인 중 로딩
+    const [emailVerified, setEmailVerified] = useState(false);                  // 이메일 인증 완료 여부
+    const [emailVerifyMsg, setEmailVerifyMsg] = useState<string | null>(null);  // 인증 결과 메시지
+    const [emailExpireIn, setEmailExpireIn] = useState<number | null>(null);
 
     const [privacy, setPrivacy] = useState<TermsDoc | null>(null);
     const [tos, setTos] = useState<TermsDoc | null>(null);
@@ -102,6 +116,25 @@ export default function SignUpPage() {
         return () => clearInterval(timer);
     }, [ok, router]);
 
+    useEffect(() => {
+        // 인증 요청 안 했거나, 이미 인증 끝났으면 타이머 안 돌림
+        if (!emailVerifyRequested || emailVerified) return;
+        if (emailExpireIn === null) return;
+        if (emailExpireIn <= 0) return;
+
+        const timer = setInterval(() => {
+            setEmailExpireIn((prev) => {
+                if (prev === null) return null;
+                if (prev <= 1) {
+                    return 0; // 0에서 멈춤
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [emailVerifyRequested, emailVerified, emailExpireIn]);
+
     // ---------- 실시간 필드별 검사기 ----------
     const liveValidate = (draft: FormState): FieldErrors => {
         const e: FieldErrors = {};
@@ -119,6 +152,11 @@ export default function SignUpPage() {
         // 이름
         if (!nameRegexLive.test(draft.name)) {
             e.name = '이름은 한글만 입력할 수 있습니다.';
+        }
+
+        // 이메일
+        if (!emailRegex.test(draft.email)) {
+            e.email = '유효한 이메일 형식이 아닙니다.';
         }
 
         // 휴대폰
@@ -156,6 +194,10 @@ export default function SignUpPage() {
         else if (!nameRegexFinal.test(data.name))
             e.name = '이름은 한글만 입력할 수 있습니다.';
 
+        if (!data.email.trim()) e.email = '이메일을 입력해 주세요.';
+        else if (!emailRegexFinal.test(data.email))
+            e.email = '유효한 이메일 형식이 아닙니다.';
+
         const digits = data.phone.replace(/\D/g, '');
         if (!digits) e.phone = '휴대폰 번호를 입력해 주세요.';
         else if (!(digits.length === 10 || digits.length === 11))
@@ -180,6 +222,16 @@ export default function SignUpPage() {
             setForm(draft);
             setTouched((t) => ({ ...t, phone: true }));
             return;
+        }
+
+        // ✅ 이메일이 바뀌면 인증 상태 초기화
+        if (name === 'email') {
+            setEmailVerified(false);
+            setEmailVerifyRequested(false);
+            setEmailCode('');
+            setEmailSentMsg(null);
+            setEmailVerifyMsg(null);
+            setEmailExpireIn(null);
         }
 
         const draft = { ...form, [name]: value };
@@ -215,7 +267,7 @@ export default function SignUpPage() {
                     name: form.name,
                     phone: form.phone,          // "010-1234-5678" 형태 허용 (서버에서 숫자만 저장)
                     password: form.password,
-                    email: undefined,           // 있으면 전송
+                    email: form.email,           // 있으면 전송
                     consents: [
                         { termsId: String(privacy?.termsId) }, // 개인정보 처리방침
                         { termsId: String(tos?.termsId) },     // 이용약관
@@ -227,13 +279,109 @@ export default function SignUpPage() {
             const data = await res.json(); // { ok: true, userId: '...' }
             await new Promise((r) => setTimeout(r, 500));
             setOk(true);
-            setForm({ userId: '', password: '', name: '', phone: '' });
+            setForm({ userId: '', password: '', name: '', email: '', phone: '' });
             setTouched({});
             setErrors({});
         } catch {
             setErrors({ global: '오류가 발생했습니다.' });
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const onClickSendEmailVerify = async () => {
+        if (!form.email.trim()) {
+            setTouched((t) => ({ ...t, email: true }));
+            setErrors((prev) => ({
+                ...prev,
+                email: '이메일을 입력해 주세요.',
+            }));
+            return;
+        }
+
+        if (!emailRegexFinal.test(form.email)) {
+            setTouched((t) => ({ ...t, email: true }));
+            setErrors((prev) => ({
+                ...prev,
+                email: '유효한 이메일 형식이 아닙니다.',
+            }));
+            return;
+        }
+
+        setEmailSentMsg(null);
+        setEmailVerifyMsg(null);
+        setEmailVerified(false);
+        setEmailVerifyRequested(false);
+        setEmailCode('');
+
+        try {
+            setEmailSending(true);
+            const res = await fetch('/server-api/auth/email/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: form.email }),
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || '인증 메일 전송에 실패했습니다.');
+            }
+
+            setEmailSentMsg('인증 메일을 전송했습니다. 메일함을 확인해 주세요.');
+            setEmailVerifyRequested(true); // ✅ 인증번호 입력칸 노출
+            setEmailExpireIn(180);
+        } catch (err: any) {
+            setEmailSentMsg(
+                err?.message || '인증 메일 전송 중 오류가 발생했습니다.'
+            );
+        } finally {
+            setEmailSending(false);
+        }
+    };
+
+    const onClickConfirmEmailCode = async () => {
+        if (!emailVerifyRequested) return;
+
+        // ✅ 프론트에서 3분 만료 체크
+        if (emailExpireIn !== null && emailExpireIn <= 0) {
+            setEmailVerifyMsg('인증 시간이 만료되었습니다. 인증번호를 다시 요청해 주세요.');
+            setEmailVerified(false);
+            return;
+        }
+
+        if (!emailCode.trim()) {
+            setEmailVerifyMsg('인증번호를 입력해 주세요.');
+            setEmailVerified(false);
+            return;
+        }
+
+        try {
+            setEmailVerifying(true);
+            setEmailVerifyMsg(null);
+
+            const res = await fetch('/server-api/auth/email/verify/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: form.email,
+                    code: emailCode,
+                }),
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || '인증번호가 일치하지 않습니다.');
+            }
+
+            setEmailVerified(true);
+            setEmailVerifyMsg('이메일 인증이 완료되었습니다.');
+        } catch (err: any) {
+            setEmailVerified(false);
+            setEmailVerifyMsg(
+                err?.message || '인증번호가 일치하지 않습니다.'
+            );
+        } finally {
+            setEmailVerifying(false);
         }
     };
 
@@ -408,6 +556,104 @@ export default function SignUpPage() {
                                     )}
                                 </div>
 
+                                {/* 이메일 */}
+                                <div>
+                                    <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+                                        이메일
+                                    </label>
+
+                                    {/* 인풋 + 인증 메일 보내기 버튼 */}
+                                    <div className="mt-1 flex gap-2">
+                                        <input
+                                            id="email"
+                                            name="email"
+                                            value={form.email}
+                                            onChange={onChange}
+                                            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+                                            placeholder="example@domain.com"
+                                            className={`${inputClass(Boolean(mergedErrors.email))} flex-1`}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={onClickSendEmailVerify}
+                                            disabled={
+                                                emailSending ||
+                                                !form.email.trim() ||
+                                                Boolean(mergedErrors.email) ||
+                                                emailVerified
+                                            }
+                                            className="whitespace-nowrap rounded-xl border border-indigo-500 px-3 py-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                                        >
+                                            {emailVerified
+                                                ? '인증 완료'
+                                                : emailSending
+                                                    ? '전송 중…'
+                                                    : '인증 메일 보내기'}
+                                        </button>
+                                    </div>
+
+                                    {mergedErrors.email && (
+                                        <p className="mt-1 text-xs text-red-600">{mergedErrors.email}</p>
+                                    )}
+
+                                    {emailSentMsg && (
+                                        <p className="mt-1 text-xs text-slate-600">{emailSentMsg}</p>
+                                    )}
+
+                                    {emailVerifyRequested && !emailVerified && (
+                                        <div className="mt-2">
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={emailCode}
+                                                    onChange={(e) => setEmailCode(e.target.value)}
+                                                    placeholder="인증번호를 입력해 주세요"
+                                                    className="flex-1 mt-0 w-full rounded-xl border bg-white px-4 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 border-slate-200 focus:ring-indigo-500"
+                                                    disabled={emailExpireIn !== null && emailExpireIn <= 0}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={onClickConfirmEmailCode}
+                                                    disabled={
+                                                        emailVerifying ||
+                                                        !emailCode.trim() ||
+                                                        (emailExpireIn !== null && emailExpireIn <= 0)
+                                                    }
+                                                    className="whitespace-nowrap rounded-xl bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                >
+                                                    {emailVerifying ? '확인 중…' : '인증번호 확인'}
+                                                </button>
+                                            </div>
+
+                                            {/* ✅ 남은 시간 표시 */}
+                                            {emailExpireIn !== null && emailExpireIn > 0 && (
+                                                <p className="mt-1 text-xs text-slate-500">
+                                                    남은 시간:{' '}
+                                                    {Math.floor(emailExpireIn / 60)}:
+                                                    {String(emailExpireIn % 60).padStart(2, '0')}
+                                                </p>
+                                            )}
+
+                                            {/* ✅ 만료 안내 */}
+                                            {emailExpireIn !== null && emailExpireIn <= 0 && (
+                                                <p className="mt-1 text-xs text-red-600">
+                                                    인증 시간이 만료되었습니다. 인증번호를 다시 요청해 주세요.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {emailVerifyMsg && (
+                                        <p
+                                            className={`mt-1 text-xs ${
+                                                emailVerified ? 'text-emerald-600' : 'text-red-600'
+                                            }`}
+                                        >
+                                            {emailVerifyMsg}
+                                        </p>
+                                    )}
+                                </div>
+
                                 {/* 휴대폰 */}
                                 <div>
                                     <label htmlFor="phone" className="block text-sm font-medium text-slate-700">
@@ -458,7 +704,7 @@ export default function SignUpPage() {
                                     </button>
                                     <button
                                         type="submit"
-                                        disabled={submitting || ok}
+                                        disabled={submitting || ok || !emailVerified}
                                         className="w-2/3 rounded-2xl bg-indigo-600 py-3 text-white font-semibold shadow hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
                                     >
                                         {submitting ? '처리 중…' : '가입하기'}

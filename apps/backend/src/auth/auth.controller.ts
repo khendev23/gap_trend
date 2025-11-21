@@ -18,6 +18,8 @@ import { JwtAuthGuard } from './jwt.guard';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as argon2 from 'argon2';
 import { Request } from 'express';
+import {SendEmailVerificationDto} from "./dto/send-email-verification.dto";
+import {ConfirmEmailVerificationDto} from "./dto/confirm-email-verification.dto";
 
 @Controller('api/auth')
 export class AuthController {
@@ -25,6 +27,18 @@ export class AuthController {
         private authService: AuthService, private jwtService: JwtService,
         private readonly prisma: PrismaService,
     ) {}
+
+    @Post('email/verify')
+    async emailVerify(@Body() dto: SendEmailVerificationDto) {
+        await this.authService.sendEmailVerification(dto.email);
+        return { ok: true };
+    }
+
+    @Post('email/verify/confirm')
+    async emailVerifyConfirm(@Body() dto: ConfirmEmailVerificationDto) {
+        await this.authService.confirmEmailVerification(dto.email, dto.code);
+        return { ok: true };
+    }
 
     @Post('signup')
     async signup(@Body() dto: SignupRequestDto): Promise<SignupResponseDto> {

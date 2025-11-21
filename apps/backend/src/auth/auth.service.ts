@@ -14,6 +14,9 @@ import * as crypto from 'crypto';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import * as process from 'node:process';
 import { formatInTimeZone } from 'date-fns-tz';
+import * as bcrypt from 'bcrypt';
+import { addMinutes } from 'date-fns';
+import { MailService } from '../mail/mail.service';
 
 type MsString =
     | `${number}${'ms'|'s'|'m'|'h'|'d'}`
@@ -24,6 +27,7 @@ export class AuthService {
     constructor(
         private jwtService: JwtService,
         private readonly prismaService: PrismaService,
+        private readonly mailService: MailService
     ) {}
 
     // 회원가입 및 약관 동의 저장
@@ -49,6 +53,14 @@ export class AuthService {
                 throw new ConflictException('이미 가입된 휴대폰 번호입니다.');
             if (dto.email && dup.email === dto.email)
                 throw new ConflictException('이미 가입된 이메일입니다.');
+        }
+
+        const emailVerify = await this.prismaService.emailVerification.findUnique({
+            where: { email: dto.email },
+        });
+
+        if (!emailVerify || !emailVerify.verifiedAt) {
+            throw new BadRequestException('이메일 인증이 완료되지 않았습니다.');
         }
 
         try {
@@ -352,5 +364,91 @@ export class AuthService {
             }
         }
         await this.prismaService.refreshToken.deleteMany({ where: { userId } });
+    }
+
+    async sendEmailVerification(email: string) {
+        const user = await this.prismaService.user.findUnique({ where: { email } });
+        if (user) throw new BadRequestException("이미 이메일 인증이 완료된 계정입니다.");
+
+        // 인증코드 생성
+        const code = this.generateCode();
+        const codeHash = await bcrypt.hash(code, 10);
+        const expiresAt = addMinutes(new Date(), 3); // 5분 유효 (원하시는 대로 조정)
+
+        // EmailVerification upsert: 이메일당 1건만 유지
+        await this.prismaService.emailVerification.upsert({
+            where: { email },
+            update: {
+                codeHash,
+                expiresAt,
+                requestedAt: new Date(),
+                verifiedAt: null,
+                tryCount: 0,
+            },
+            create: {
+                email,
+                codeHash,
+                expiresAt,
+            },
+        });
+
+        // 실제 이메일 발송 (MailService는 이미 가지고 있다고 가정)
+        await this.mailService.sendEmailVerificationCode(email, code);
+    }
+
+    /** 6자리 숫자 코드 생성 */
+    private generateCode(): string {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
+    async confirmEmailVerification(email: string, code: string) {
+        const verification = await this.prismaService.emailVerification.findUnique({
+            where: { email },
+        });
+
+        if (!verification) {
+            throw new BadRequestException('인증 요청 내역이 없습니다. 인증번호를 다시 요청해 주세요.');
+        }
+
+        // 이미 인증된 경우
+        if (verification.verifiedAt) {
+            throw new BadRequestException('이미 이메일 인증이 완료되었습니다.');
+        }
+
+        // 만료 체크 (서버 기준)
+        const now = new Date();
+        if (verification.expiresAt < now) {
+            throw new BadRequestException(
+                '인증 시간이 만료되었습니다. 인증번호를 다시 요청해 주세요.',
+            );
+        }
+
+        // 시도 횟수 제한
+        if (verification.tryCount >= 5) {
+            throw new ForbiddenException(
+                '인증 시도 횟수를 초과했습니다. 인증번호를 다시 요청해 주세요.',
+            );
+        }
+
+        // 코드 비교
+        const isMatch = await bcrypt.compare(code, verification.codeHash);
+        if (!isMatch) {
+            // 틀리면 tryCount 증가
+            await this.prismaService.emailVerification.update({
+                where: { email },
+                data: { tryCount: { increment: 1 } },
+            });
+            throw new BadRequestException('인증번호가 일치하지 않습니다.');
+        }
+
+        // ✅ 성공: 트랜잭션으로 EmailVerification + User 같이 업데이트
+        // 1) 인증 기록 업데이트
+        await this.prismaService.emailVerification.update({
+            where: { email },
+            data: {
+                verifiedAt: now,
+                tryCount: verification.tryCount, // 그대로 두거나 0으로 초기화 선택 가능
+            },
+        });
     }
 }

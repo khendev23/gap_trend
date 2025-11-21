@@ -138,7 +138,7 @@ model user {
   userId            String          @id @map("user_id") @db.VarChar(30)
   name              String          @map("name") @db.VarChar(255)
   phone             String          @unique @map("phone") @db.VarChar(20) // 010-1234-5678 등
-  email             String?         @map("email") @db.VarChar(100)
+  email             String?         @unique @map("email") @db.VarChar(100)
   passwordHash      String          @map("password_hash") @db.VarChar(255) // bcrypt/argon2 결과
   passwordUpdatedAt DateTime?       @map("password_updated_at") @db.DateTime(0)
   role              user_role       @default(ROLE_USER) @map("role")
@@ -218,17 +218,18 @@ model userConsent {
   @@map("user_consent")
 }
 
-model phoneVerificationLog {
-  id         BigInt    @id @default(autoincrement())
-  phone      String    @map("phone") @db.VarChar(20)
-  provider   String?   @map("provider") @db.VarChar(50) // 예: 'aligo', 'coolsms', 'pass'
-  verifiedAt DateTime? @map("verified_at") @db.DateTime(0)
-  resultCode String?   @map("result_code") @db.VarChar(20)
-  message    String?   @map("message") @db.VarChar(255)
-  createdAt  DateTime  @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at") @db.DateTime(0)
+model emailVerification {
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
+  codeHash    String // 해시된 인증코드
+  expiresAt   DateTime // 만료 시간
+  requestedAt DateTime  @default(dbgenerated("CURRENT_TIMESTAMP")) // 인증 요청 시각
+  verifiedAt  DateTime? // 인증 성공 시각
+  tryCount    Int       @default(0) // 시도 횟수 제한용
 
-  @@index([phone], map: "idx_phone_verification_log_phone")
-  @@map("phone_verification_log")
+  @@index([email])
+  @@index([expiresAt])
+  @@map("email_verification")
 }
 
 enum notices_visibility {
