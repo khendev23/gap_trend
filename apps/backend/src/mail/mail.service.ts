@@ -39,7 +39,7 @@ export class MailService {
 
     async sendEmailVerificationCode(to: string, code: string) {
         const subject = '은혜와평강교회 이메일 인증번호';
-        const text = `인증번호는 ${code} 입니다. 5분 안에 입력해주세요.`;
+        const text = `인증번호는 ${code} 입니다. 3분 안에 입력해주세요.`;
         const html = `
             <div style="font-family: sans-serif;">
                 <h2>은혜와평강교회 이메일 인증</h2>
@@ -47,7 +47,7 @@ export class MailService {
                 <div style="font-size: 24px; font-weight: bold; margin:16px 0;">
                     ${code}
                 </div>
-                <p>본 인증번호는 5분 동안 유효합니다.</p>
+                <p>본 인증번호는 3분 동안 유효합니다.</p>
             </div>
         `;
 
