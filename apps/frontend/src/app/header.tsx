@@ -143,6 +143,20 @@ export default function Header({user}: AppHeaderProps) {
         }, 120);
     };
 
+    const handleLogout = async () => {
+        const res = await fetch('/api/auth/logout', {
+            method: 'POST',
+
+        });
+        if (!res.ok) {
+            const m = await res.json().catch(() => ({}));
+            throw new Error(m.message ?? '로그아웃 실패');
+        }
+
+        // 쿠키는 서버가 지우기 때문에 프론트는 단순히 이동만 하면 됨
+        window.location.href = '/';
+    }
+
     return (
         <>
             {/* 고정 헤더 */}
@@ -151,9 +165,9 @@ export default function Header({user}: AppHeaderProps) {
                     {/* 좌: 로그인 / 유저 영역 */}
                     {user ? (
                         <div className="flex items-center gap-2 max-w-[40vw]">
-                <span className="hidden sm:inline text-xs md:text-sm text-gray-700 truncate">
-                    {user.name ?? "사용자"} 성도님 환영합니다
-                </span>
+                            <span className="hidden sm:inline text-xs md:text-sm text-gray-700 truncate">
+                                {user.name ?? "사용자"} 성도님 환영합니다
+                            </span>
 
                             {/* 내정보 버튼 - 모바일에서는 아이콘만, 데스크탑에서만 텍스트 */}
                             <button
@@ -167,7 +181,7 @@ export default function Header({user}: AppHeaderProps) {
 
                             {/* 로그아웃 버튼 - 작은 원형 아이콘 느낌으로 */}
                             <button
-                                // onClick={handleLogout}
+                                onClick={handleLogout}
                                 className="flex items-center justify-center w-8 h-8 md:w-auto md:px-3 md:py-1 rounded-full md:rounded bg-red-50 text-red-600 text-xs md:text-sm border border-red-200 hover:bg-red-100 transition"
                                 title="로그아웃"
                             >

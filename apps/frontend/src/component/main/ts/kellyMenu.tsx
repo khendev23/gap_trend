@@ -72,7 +72,7 @@ export default function KellyMenu() {
                 </div>
 
                 {/* 슬라이더 */}
-                <div className="w-full flex items-center justify-between mt-4 md:mt-6 px-2 md:px-0">
+                <div className="w-full flex items-center justify-between mt-4 md:mt-6 md:pb-4 px-2 md:px-0">
                     {/* 이전 버튼 */}
                     <button
                         type="button"
@@ -88,12 +88,12 @@ export default function KellyMenu() {
                         {...handlers}
                         className="
                             relative overflow-hidden
-                            w-[86vw] md:w-[60vw]
+                            w-[80vw] md:w-[70vw] lg:w-[60vw]
                             max-w-3xl
                             mx-auto
                             pt-4
                             /* 세로 이미지가 많은 경우, 보기 좋은 최대 높이 */
-                            h-[48vh] md:h-[54vh]
+                            h-[50vh] md:h-[70vh] lg:h-[75vh]
                           "
                         role="region"
                         aria-roledescription="carousel"
@@ -101,16 +101,24 @@ export default function KellyMenu() {
                     >
                         {/* 트랙 */}
                         <div
-                            className="flex transition-transform duration-400 ease-in-out"
+                            className="flex transition-transform duration-400 ease-in-out h-full"
                             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
                             aria-live="polite"
                         >
-                            {(items).map((it, idx) => (
-                                <div key={it.id ?? idx} className="min-w-full flex justify-center items-center">
+                            {items.map((it, idx) => (
+                                <div
+                                    key={it.id ?? idx}
+                                    className="min-w-full h-full flex justify-center items-center"
+                                >
                                     <img
                                         src={it.publicUrl}
                                         alt={it.alt ?? `말씀 켈리 이미지 ${idx + 1}`}
-                                        className="max-h-full w-auto object-contain rounded-md shadow-sm"
+                                        className="
+                                            max-w-full max-h-full
+                                            w-auto h-auto
+                                            object-contain
+                                            rounded-md shadow-sm
+                                        "
                                     />
                                 </div>
                             ))}

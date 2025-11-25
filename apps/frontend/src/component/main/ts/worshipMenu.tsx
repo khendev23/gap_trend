@@ -14,32 +14,32 @@ export default function WorshipMenu() {
                     </Link>
                 </div>
 
-                {/* 가로 스크롤 래퍼 (모바일에서만 실제 스크롤) */}
+                {/* 가로 스크롤 래퍼 (모바일뿐 아니라 전체에서 스크롤) */}
                 <div
                     className="
                       mt-8 px-0 py-6
-                      overflow-x-auto md:overflow-visible
-                      whitespace-nowrap md:whitespace-normal
+                      overflow-x-auto
+                      whitespace-nowrap
                       -webkit-overflow-scrolling-touch
-                      scroll-smooth md:scroll-auto
-                      snap-x snap-mandatory md:snap-none
-                      /* 스크롤바 숨김 (모바일 위주) */
+                      scroll-smooth
+                      snap-x snap-mandatory
+                      /* 스크롤바 숨김 */
                       [-ms-overflow-style:none] [scrollbar-width:none]
                       [&::-webkit-scrollbar]:hidden
                     "
                     aria-label="예배 카드 리스트"
                 >
                     {/* 카드 리스트 */}
-                    <div className="flex md:flex-wrap gap-5 px-6 md:px-0 md:gap-6">
+                    <div className="flex gap-5 px-6">
                         {[1, 2, 3, 4, 5].map((num) => (
                             <Link
                                 href="/"
                                 key={num}
-                                className="snap-start md:snap-none md:basis-[calc(33.333%-1rem)] lg:basis-[calc(25%-1rem)] md:flex-shrink-0"
+                                className="snap-start shrink-0"
                             >
                                 <div
                                     className="
-                                      shrink-0 w-[200px] md:w-full
+                                      w-[200px]
                                       px-2 text-center text-black
                                       hover:opacity-90 transition
                                     "
@@ -49,7 +49,9 @@ export default function WorshipMenu() {
                                         alt={`예배 ${num}`}
                                         className="w-full h-auto rounded-lg"
                                     />
-                                    <p className="mt-2 text-sm md:text-base">예배 제목 {num}</p>
+                                    <p className="mt-2 text-sm md:text-base">
+                                        예배 제목 {num}
+                                    </p>
                                 </div>
                             </Link>
                         ))}

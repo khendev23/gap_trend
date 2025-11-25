@@ -98,24 +98,31 @@ export default function KellyBoard() {
         <div className="min-h-screen bg-white text-gray-900">
             {/* 헤더 */}
             <header className="sticky top-0 z-10 border-b bg-white/90 backdrop-blur">
-                <div className="mx-auto max-w-xl px-4 py-3 flex items-center justify-between">
+                <div className="mx-auto max-w-5xl px-4 md:px-6 lg:px-8 py-3 flex items-center justify-between">
                     <button
                         onClick={() => router.back()}
                         aria-label="뒤로가기"
                         className="p-2 rounded-lg hover:bg-gray-100 active:scale-95"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                             className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2"
-                             strokeLinecap="round" strokeLinejoin="round">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            className="h-6 w-6"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
                             <path d="M15 18l-6-6 6-6" />
                         </svg>
                     </button>
 
-                    <h1 className="text-lg font-bold">켈리 게시판</h1>
+                    <h1 className="text-base md:text-lg font-bold">켈리 게시판</h1>
 
                     <button
                         onClick={() => alert("업로드 기능 연결")}
-                        className="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 active:scale-95"
+                        className="rounded-lg px-3 py-2 text-xs md:text-sm font-medium text-gray-700 hover:bg-gray-100 active:scale-95"
                     >
                         업로드
                     </button>
@@ -123,7 +130,7 @@ export default function KellyBoard() {
             </header>
 
             {/* 본문 */}
-            <main className="mx-auto max-w-xl px-4 py-4">
+            <main className="mx-auto max-w-5xl px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8">
                 {/* 에러 */}
                 {error && (
                     <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -133,8 +140,8 @@ export default function KellyBoard() {
 
                 {/* 목록 + 스켈레톤 */}
                 {items.length === 0 && loading ? (
-                    <div className="columns-2 gap-4 sm:columns-3">
-                        {Array.from({ length: 9 }).map((_, i) => (
+                    <div className="columns-2 gap-4 sm:columns-3 md:columns-4 lg:columns-5">
+                        {Array.from({ length: 12 }).map((_, i) => (
                             <div key={i} className="mb-4 break-inside-avoid">
                                 <div className="h-40 w-full animate-pulse rounded-xl bg-gray-200" />
                             </div>
@@ -144,7 +151,8 @@ export default function KellyBoard() {
                     <p className="text-center text-sm text-gray-500">표시할 이미지가 없습니다.</p>
                 ) : (
                     <>
-                        <div className="columns-2 gap-4 sm:columns-3">
+                        {/* 모바일~데스크톱 모두 대응하는 masonry-style 컬럼 */}
+                        <div className="columns-2 gap-4 sm:columns-3 md:columns-4 lg:columns-5">
                             {items.map((item) => (
                                 <div key={item.id} className="mb-4 break-inside-avoid">
                                     {/* 모달 오픈 버튼 */}
@@ -157,7 +165,7 @@ export default function KellyBoard() {
                                             src={item.publicUrl}
                                             alt={item.alt ?? `켈리 작품 ${item.id}`}
                                             loading="lazy"
-                                            className="w-full"
+                                            className="w-full h-auto"
                                         />
                                     </button>
                                 </div>
@@ -167,7 +175,10 @@ export default function KellyBoard() {
                         {/* 무한 스크롤 센티널 */}
                         {(loading || hasMore) && (
                             <div className="mt-6 flex justify-center">
-                                <div ref={sentinelRef} className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
+                                <div
+                                    ref={sentinelRef}
+                                    className="h-10 w-10 animate-pulse rounded-full bg-gray-200"
+                                />
                             </div>
                         )}
                     </>
