@@ -22,7 +22,7 @@ export default function VisionPage() {
                     <button
                         onClick={() => router.back()}
                         aria-label="뒤로가기"
-                        className="justify-self-start rounded-lg p-2 hover:bg-gray-100 active:scale-95"
+                        className="justify-self-start rounded-lg p-2 hover:bg-gray-100 active:scale-95 lg:opacity-0 lg:pointer-events-none"
                     >
                         <ArrowLeftIcon className="h-6 w-6" />
                     </button>

@@ -102,7 +102,7 @@ export default function KellyBoard() {
                     <button
                         onClick={() => router.back()}
                         aria-label="뒤로가기"
-                        className="p-2 rounded-lg hover:bg-gray-100 active:scale-95"
+                        className="p-2 rounded-lg hover:bg-gray-100 active:scale-95 lg:opacity-0 lg:pointer-events-none"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"

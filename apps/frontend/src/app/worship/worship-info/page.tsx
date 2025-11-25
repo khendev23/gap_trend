@@ -39,7 +39,7 @@ export default function WorshipGuidePage() {
             title: "수요예배",
             when: "수요일 오후 7:30",
             where: "본당(1층)",
-            desc: "하이델베르크 요리문답 강해설교",
+            desc: "에베소서 강해설교",
         },
         {
             title: "금요 기도회",
@@ -72,7 +72,7 @@ export default function WorshipGuidePage() {
                     <button
                         onClick={() => router.back()}
                         aria-label="뒤로가기"
-                        className="justify-self-start rounded-lg p-2 hover:bg-gray-100 active:scale-95"
+                        className="justify-self-start rounded-lg p-2 hover:bg-gray-100 active:scale-95 lg:opacity-0 lg:pointer-events-none"
                     >
                         <ArrowLeftIcon className="h-6 w-6" />
                     </button>

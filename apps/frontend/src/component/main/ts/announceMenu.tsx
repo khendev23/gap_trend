@@ -24,14 +24,16 @@ export default function AnnounceMenu() {
     const isActive = (key: TabKey) => selectedMenu === key;
 
     // 날짜 포맷: 'YY.MM.DD'
+    // 추천: UTC 기준
     const fmt = (iso?: string) => {
         if (!iso) return '';
-        const d = new Date(iso); // ← 이게 더 정확합니다.
-        const yy = String(d.getFullYear()).slice(-2);
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
+        const d = new Date(iso);
+        const yy = String(d.getUTCFullYear()).slice(-2);
+        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const dd = String(d.getUTCDate()).padStart(2, '0');
         return `${yy}.${mm}.${dd}`;
     };
+
 
     useEffect(() => {
         const ctrl = new AbortController();
@@ -50,6 +52,8 @@ export default function AnnounceMenu() {
                     notice: Array.isArray(data?.notice) ? data.notice.slice(0, 5) : [],
                     news: Array.isArray(data?.news) ? data.news.slice(0, 5) : [],
                 });
+
+                console.log(data);
             } catch (err) {
                 if ((err as any)?.name !== 'AbortError') {
                     console.error(err);
@@ -135,9 +139,9 @@ export default function AnnounceMenu() {
                                                 ? `/notice/${item.id}`
                                                 : `/news/${item.id}`
                                         }
-                                        className="flex-1"
+                                        className="flex-1 text-black"
                                     >
-                                        <p className="contentsTitle text-[0.9rem] truncate pr-3">
+                                        <p className="contentsTitle text-[0.9rem] truncate pr-3 text-black">
                                             {item.title}
                                         </p>
                                     </Link>
@@ -186,7 +190,7 @@ export default function AnnounceMenu() {
                                                     href={`/notice/${item.id}`}
                                                     className="flex-1"
                                                 >
-                                                    <p className="contentsTitle text-sm md:text-base truncate pr-3">
+                                                    <p className="contentsTitle text-sm md:text-base truncate pr-3 text-black">
                                                         {item.title}
                                                     </p>
                                                 </Link>

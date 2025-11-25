@@ -34,7 +34,7 @@ export default function NoticeWritePage() {
                 <div className="mx-auto max-w-xl px-4 py-3 grid grid-cols-3 items-center">
                     <button
                         onClick={() => router.back()}
-                        className="justify-self-start rounded-lg p-2 hover:bg-gray-100 active:scale-95"
+                        className="justify-self-start rounded-lg p-2 hover:bg-gray-100 active:scale-95 lg:opacity-0 lg:pointer-events-none"
                         aria-label="뒤로가기"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"

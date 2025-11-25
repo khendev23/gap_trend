@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import React from "react";
 import {useEffect, useState} from "react";
 
 interface NoticeDetailProps {
@@ -28,13 +29,22 @@ export default function NoticeDetail({ id }: NoticeDetailProps) {
             try {
                 const res = await fetch(url, { cache: "no-store" });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data: noticeItem[] = await res.json();
-                if (Array.isArray(data) && data.length) setNoticeItems(data);
-            } catch {
 
+                const data = await res.json();
+                console.log('detail data:', data);
+
+                if (Array.isArray(data)) {
+                    if (data.length) setNoticeItems(data);
+                } else if (data) {
+                    // 👈 객체 하나일 때 배열로 감싸기
+                    setNoticeItems([data]);
+                }
+            } catch (e) {
+                console.error(e);
             }
         })();
-    }, [])
+    }, [id]); // id도 deps에 넣어 주세요
+
 
     return (
         <div className="min-h-screen bg-white text-gray-900 pb-6">
@@ -45,7 +55,7 @@ export default function NoticeDetail({ id }: NoticeDetailProps) {
                         <button
                             aria-label="뒤로가기"
                             onClick={() => router.back()}
-                            className="rounded-xl p-2 active:scale-95 transition"
+                            className="rounded-xl p-2 active:scale-95 transition lg:opacity-0 lg:pointer-events-none"
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -72,8 +82,8 @@ export default function NoticeDetail({ id }: NoticeDetailProps) {
             <main className="mx-auto max-w-xl px-4">
                 {/* 제목 */}
                 {noticeItems.map(notice => (
-                    <>
-                        <h2 key={notice.id} className="mt-4 text-lg font-semibold leading-snug">{notice.title}</h2>
+                    <React.Fragment key={notice.id}>
+                        <h2 className="mt-4 text-lg font-semibold leading-snug">{notice.title}</h2>
                         {/* 메타 */}
                         <div className="mt-1 text-sm text-gray-500">
                             <span>{formatDateK(notice.date)}</span>
@@ -121,7 +131,7 @@ export default function NoticeDetail({ id }: NoticeDetailProps) {
                                 공유
                             </button>
                         </div>
-                    </>
+                    </React.Fragment>
                 ))}
             </main>
         </div>
@@ -129,9 +139,7 @@ export default function NoticeDetail({ id }: NoticeDetailProps) {
 }
 
 function formatDateK(dateStr: string) {
-    const d = new Date(dateStr);
-    const y = d.getFullYear();
-    const m = d.getMonth() + 1;
-    const dd = d.getDate();
-    return `${y}년 ${m}월 ${dd}일`;
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-'); // "2025-11-25" → ["2025","11","25"]
+    return `${y}년 ${Number(m)}월 ${Number(d)}일`;
 }

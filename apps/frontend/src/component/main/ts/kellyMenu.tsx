@@ -72,7 +72,7 @@ export default function KellyMenu() {
                 </div>
 
                 {/* 슬라이더 */}
-                <div className="w-full flex items-center justify-between mt-4 md:mt-6 md:pb-4 px-2 md:px-0">
+                <div className="w-full flex items-center justify-between mt-4 md:mt-6 md:pb-6 px-2 md:px-0">
                     {/* 이전 버튼 */}
                     <button
                         type="button"
@@ -93,7 +93,7 @@ export default function KellyMenu() {
                             mx-auto
                             pt-4
                             /* 세로 이미지가 많은 경우, 보기 좋은 최대 높이 */
-                            h-[50vh] md:h-[70vh] lg:h-[75vh]
+                            h-[50vh] md:h-[50vh] lg:h-[50vh]
                           "
                         role="region"
                         aria-roledescription="carousel"

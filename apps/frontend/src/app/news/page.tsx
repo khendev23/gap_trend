@@ -13,7 +13,7 @@ interface Post {
 
 export default function MobileBulletinBoard() {
     const [q, setQ] = useState<string>("");
-    const [category, setCategory] = useState<null | "notice" | "news">("notice");
+    const [category, setCategory] = useState<null | "notice" | "news">("news");
 
     function getDetailHref(p: Post) {
         return p.category === "notice" ? `/notice/${p.id}` : `/news/${p.id}`;

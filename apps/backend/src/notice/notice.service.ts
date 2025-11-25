@@ -22,21 +22,29 @@ export class NoticeService {
 
     // 2. 각 카테고리별 게시글 조회
     async getLatestPosts(slug: string, take = 5) {
-        const categoryId : bigint = await this.getCategoryId(slug);
-
+        const categoryId: bigint = await this.getCategoryId(slug);
         if (!categoryId) return [];
 
-        return this.prismaService.notices.findMany({
+        const rows = await this.prismaService.notices.findMany({
             where: {
                 categoryId,
-                visibility : 'PUBLIC',
-                deletedAt : null
+                visibility: 'PUBLIC',
+                deletedAt: null,
             },
-            orderBy : [{ createdAt : 'desc'}, {id : 'desc'}],
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
             take,
-            select : { id:true, title:true, createdAt:true, categoryId:true}
+            select: { id: true, title: true, createdAt: true, categoryId: true },
         });
+
+        // 👇 여기서 프론트 친화적인 형태로 변환
+        return rows.map((r) => ({
+            id: Number(r.id),                    // BigInt → number or string
+            title: r.title,
+            createdAt: r.createdAt.toString(), // Date → ISO string
+            categoryId: Number(r.categoryId),
+        }));
     }
+
 
     // 카테고리별 게시글 조회요청하여 리턴
     async getHomeLists() {
@@ -48,9 +56,7 @@ export class NoticeService {
         return { notice, news };
     }
 
-    // id별 공지사항 게시판 데이터 조회
     async getNoticePostById(id: bigint) {
-
         const [post, files] = await this.prismaService.$transaction([
             this.prismaService.notices.findUnique({ where: { id } }),
             this.prismaService.noticeAttachments.findMany({
@@ -69,10 +75,11 @@ export class NoticeService {
 
         return {
             id: post.id.toString(),
-            title: (post as any).title ?? '',
-            date: new Date((post as any).createdAt ?? (post as any).date ?? Date.now()).toISOString(),
-            author: (post as any).author ?? '',
-            content: (post as any).content ?? '', // ✅ HTML 원문 그대로
+            title: post.title ?? '',
+            // 🔥 여기! UTC 기준 날짜만 잘라서 내려줌
+            date: post.createdAt.toISOString().slice(0, 10), // "2025-11-25"
+            author: post.author ?? '',
+            content: post.content ?? '',
             attachments,
         };
     }

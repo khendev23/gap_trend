@@ -169,7 +169,7 @@ export default function WorshipBoard() {
             title: fTitle,
             verse: fVerse,
             preacher: fPreacher,
-            category: fCategory,              // ✅ 선택한 예배 종류 반영
+            category: fCategory, // ✅ 선택한 예배 종류 반영
             thumbnail: thumb,
         };
 
@@ -181,11 +181,12 @@ export default function WorshipBoard() {
     return (
         <div className="min-h-screen bg-white text-gray-900 pb-24">
             <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b">
-                <div className="mx-auto max-w-xl px-4 py-3 grid grid-cols-3 items-center">
+                {/* 상단 타이틀 / 뒤로가기 / 업로드 */}
+                <div className="mx-auto max-w-xl md:max-w-3xl lg:max-w-5xl px-4 md:px-6 lg:px-8 py-3 grid grid-cols-3 items-center">
                     <div className="justify-self-start">
                         <button
                             aria-label="Back"
-                            className="rounded-xl p-2 active:scale-95 transition"
+                            className="rounded-xl p-2 active:scale-95 transition lg:opacity-0 lg:pointer-events-none"
                             onClick={() => history.back()}
                         >
                             <svg
@@ -202,7 +203,7 @@ export default function WorshipBoard() {
                             </svg>
                         </button>
                     </div>
-                    <h1 className="text-center font-bold tracking-tight whitespace-nowrap text-[clamp(1rem,5vw,1.25rem)]">
+                    <h1 className="text-center font-bold tracking-tight whitespace-nowrap text-[clamp(1rem,5vw,1.25rem)] md:text-[1.3rem]">
                         예배 게시판
                     </h1>
                     {/* 업로드 버튼 (관리자만 보임) */}
@@ -218,80 +219,151 @@ export default function WorshipBoard() {
                     )}
                 </div>
 
-                {/* 필터 버튼 두 줄 */}
-                <div className="mx-auto max-w-xl px-4 pb-3 space-y-2">
-                    <div className="flex items-center rounded-2xl bg-gray-100 p-1">
-                        <SegButton active={category === "all"} onClick={() => setCategory("all")}>
-                            전체
-                        </SegButton>
-                        <SegButton active={category === "sundayAM"} onClick={() => setCategory("sundayAM")}>
-                            주일오전
-                        </SegButton>
-                        <SegButton active={category === "sundayPM"} onClick={() => setCategory("sundayPM")}>
-                            주일오후
-                        </SegButton>
+                {/* 필터 + (태블릿/PC용) 검색 */}
+                {/* 필터 + (태블릿/PC용) 검색 */}
+                <div className="mx-auto max-w-xl md:max-w-3xl lg:max-w-5xl px-4 md:px-6 lg:px-8 pb-3 space-y-2 md:space-y-3">
+                    {/* ✅ 모바일: 기존 2줄 그대로 유지 */}
+                    <div className="md:hidden space-y-2">
+                        <div className="flex items-center rounded-2xl bg-gray-100 p-1">
+                            <SegButton active={category === "all"} onClick={() => setCategory("all")}>
+                                전체
+                            </SegButton>
+                            <SegButton active={category === "sundayAM"} onClick={() => setCategory("sundayAM")}>
+                                주일오전
+                            </SegButton>
+                            <SegButton active={category === "sundayPM"} onClick={() => setCategory("sundayPM")}>
+                                주일오후
+                            </SegButton>
+                        </div>
+                        <div className="flex items-center rounded-2xl bg-gray-100 p-1">
+                            <SegButton active={category === "wednesday"} onClick={() => setCategory("wednesday")}>
+                                수요예배
+                            </SegButton>
+                            <SegButton active={category === "friday"} onClick={() => setCategory("friday")}>
+                                금요기도회
+                            </SegButton>
+                            <SegButton active={category === "youth"} onClick={() => setCategory("youth")}>
+                                청년/학생
+                            </SegButton>
+                        </div>
                     </div>
-                    <div className="flex items-center rounded-2xl bg-gray-100 p-1">
-                        <SegButton active={category === "wednesday"} onClick={() => setCategory("wednesday")}>
-                            수요
-                        </SegButton>
-                        <SegButton active={category === "friday"} onClick={() => setCategory("friday")}>
-                            금요
-                        </SegButton>
-                        <SegButton active={category === "youth"} onClick={() => setCategory("youth")}>
-                            청년
-                        </SegButton>
+
+                    {/* ✅ 태블릿/데스크탑: 전체 / 나머지 예배 구분 + 오른쪽 검색 */}
+                    <div className="hidden md:flex flex-col gap-2">
+                        <div className="flex items-center justify-between gap-3">
+                            {/* 왼쪽: 전체 / 나머지 예배 버튼 묶음 */}
+                            <div className="flex items-center gap-3 whitespace-nowrap">
+                                {/* 전체만 따로 */}
+                                <div className="flex items-center rounded-2xl bg-gray-100 p-1 flex-nowrap">
+                                    <SegButton active={category === "all"} onClick={() => setCategory("all")}>
+                                        전체
+                                    </SegButton>
+                                </div>
+
+                                {/* 나머지 예배 통합 */}
+                                <div className="flex items-center rounded-2xl bg-gray-100 p-1 flex-nowrap">
+                                    <SegButton active={category === "sundayAM"} onClick={() => setCategory("sundayAM")}>
+                                        주일오전
+                                    </SegButton>
+                                    <SegButton active={category === "sundayPM"} onClick={() => setCategory("sundayPM")}>
+                                        주일오후
+                                    </SegButton>
+                                    <SegButton active={category === "wednesday"} onClick={() => setCategory("wednesday")}>
+                                        수요예배
+                                    </SegButton>
+                                    <SegButton active={category === "friday"} onClick={() => setCategory("friday")}>
+                                        금요기도회
+                                    </SegButton>
+                                    <SegButton active={category === "youth"} onClick={() => setCategory("youth")}>
+                                        청년/학생
+                                    </SegButton>
+                                </div>
+                            </div>
+
+                            {/* 오른쪽: 검색바 (태블릿/PC 전용) */}
+                            <div className="hidden md:block md:w-72 lg:w-80">
+                                <label className="relative block">
+                                    <span className="sr-only">Search</span>
+                                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 24 24"
+                                            className="h-5 w-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                        >
+                                            <circle cx="11" cy="11" r="8" />
+                                            <path d="m21 21-3.6-3.6" />
+                                        </svg>
+                                    </span>
+                                    <input
+                                        value={q}
+                                        onChange={(e) => setQ(e.target.value)}
+                                        placeholder="예배 게시글 검색"
+                                        className="w-full rounded-2xl bg-gray-100 px-10 py-2.5 text-sm md:text-base outline-none ring-1 ring-transparent focus:ring-gray-300"
+                                        type="search"
+                                        inputMode="search"
+                                    />
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
 
-            <main className="mx-auto max-w-xl px-4">
+            {/* 본문 리스트 */}
+            <main className="mx-auto max-w-xl md:max-w-3xl lg:max-w-5xl px-4 md:px-6 lg:px-8">
                 <ul role="list" className="divide-y divide-gray-200">
                     {filtered.map((p) => (
-                        <li key={p.id} className="py-3">
+                        <li key={p.id} className="py-3 md:py-4">
                             <Link
                                 href={`/worship/${p.id}`}
                                 aria-label={`${p.title} 상세 보기`}
                                 className="block -m-3 p-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition"
                             >
-                                <article className="flex items-start gap-3">
-                                    <div className="relative w-32 aspect-video shrink-0 overflow-hidden rounded-xl bg-gray-200">
+                                <article className="flex items-start gap-3 md:gap-4">
+                                    <div className="relative w-28 md:w-40 lg:w-48 aspect-video shrink-0 overflow-hidden rounded-xl bg-gray-200">
                                         <Thumbnail src={p.thumbnail} />
                                     </div>
-                                    <div className="flex-1 min-w-0 text-sm leading-5">
+                                    <div className="flex-1 min-w-0 text-sm leading-5 md:text-[0.95rem]">
                                         <p className="text-gray-500">{p.date}</p>
-                                        <p className="font-semibold text-gray-900 line-clamp-1">{p.title}</p>
-                                        <p className="text-gray-600 line-clamp-1">{p.verse}</p>
-                                        <p className="text-gray-500 line-clamp-1">{p.preacher}</p>
+                                        <p className="font-semibold text-gray-900 line-clamp-1 md:line-clamp-2">
+                                            {p.title}
+                                        </p>
+                                        <p className="text-gray-600 line-clamp-1 md:line-clamp-2">{p.verse}</p>
+                                        <p className="text-gray-500 line-clamp-1 md:mt-1">{p.preacher}</p>
                                     </div>
                                 </article>
                             </Link>
                         </li>
                     ))}
                     {filtered.length === 0 && (
-                        <li className="py-16 text-center text-sm text-gray-500">검색 결과가 없습니다.</li>
+                        <li className="py-16 text-center text-sm md:text-base text-gray-500">
+                            검색 결과가 없습니다.
+                        </li>
                     )}
                 </ul>
             </main>
 
-            {/* 하단 고정 검색바 */}
-            <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-white/95 backdrop-blur">
+            {/* 하단 고정 검색바 - 모바일 전용 */}
+            <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-white/95 backdrop-blur md:hidden">
                 <div className="mx-auto max-w-xl px-4 py-3 pb-[env(safe-area-inset-bottom)]">
                     <label className="relative block">
                         <span className="sr-only">Search</span>
                         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-              <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-3.6-3.6" />
-              </svg>
-            </span>
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                            >
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-3.6-3.6" />
+                            </svg>
+                        </span>
                         <input
                             value={q}
                             onChange={(e) => setQ(e.target.value)}
@@ -381,7 +453,11 @@ export default function WorshipBoard() {
                                     <div className="mt-3 rounded-xl overflow-hidden bg-gray-100">
                                         <div className="relative w-full aspect-video">
                                             {/* 미리보기는 img로 간단히 */}
-                                            <img src={thumbPreview} alt="미리보기" className="absolute inset-0 h-full w-full object-cover" />
+                                            <img
+                                                src={thumbPreview}
+                                                alt="미리보기"
+                                                className="absolute inset-0 h-full w-full object-cover"
+                                            />
                                         </div>
                                     </div>
                                 )}
@@ -483,7 +559,7 @@ function SegButton({
             type="button"
             onClick={onClick}
             className={[
-                "flex-1 rounded-xl px-3 py-2 text-sm transition",
+                "flex-1 rounded-xl px-3 py-2 text-sm transition text-center",
                 active ? "bg-white shadow text-gray-900" : "text-gray-700",
             ].join(" ")}
         >
