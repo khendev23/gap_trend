@@ -6,28 +6,57 @@ import {
     NotFoundException,
     UnauthorizedException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { SignupRequestDto } from './dto/signup.request.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import {
+    DataSource,
+    Repository,
+    MoreThan,
+    IsNull,
+    QueryFailedError,
+} from 'typeorm';
+
 import * as argon2 from 'argon2';
-import { terms_status } from '@prisma/client';
 import * as crypto from 'crypto';
-import { JwtService, JwtSignOptions } from '@nestjs/jwt';
-import * as process from 'node:process';
-import { formatInTimeZone } from 'date-fns-tz';
 import * as bcrypt from 'bcrypt';
+import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { addMinutes } from 'date-fns';
+import * as process from 'node:process';
+
+import { SignupRequestDto } from './dto/signup.request.dto';
 import { MailService } from '../mail/mail.service';
 
+import { User } from './user.entity';
+import { Terms } from '../terms/terms.entity';
+import { TermsStatus } from '../terms/terms.enums';
+import { UserConsent } from './user-consent.entity';
+import { RefreshToken } from './refresh-token.entity';
+import { EmailVerification } from './email-verification.entity';
+
 type MsString =
-    | `${number}${'ms'|'s'|'m'|'h'|'d'}`
-    | `${number} ${'milliseconds'|'seconds'|'minutes'|'hours'|'days'}`;
+    | `${number}${'ms' | 's' | 'm' | 'h' | 'd'}`
+    | `${number} ${'milliseconds' | 'seconds' | 'minutes' | 'hours' | 'days'}`;
 
 @Injectable()
 export class AuthService {
     constructor(
-        private jwtService: JwtService,
-        private readonly prismaService: PrismaService,
-        private readonly mailService: MailService
+        private readonly jwtService: JwtService,
+        private readonly mailService: MailService,
+        private readonly dataSource: DataSource,
+
+        @InjectRepository(User)
+        private readonly userRepo: Repository<User>,
+
+        @InjectRepository(Terms)
+        private readonly termsRepo: Repository<Terms>,
+
+        @InjectRepository(UserConsent)
+        private readonly userConsentRepo: Repository<UserConsent>,
+
+        @InjectRepository(RefreshToken)
+        private readonly refreshTokenRepo: Repository<RefreshToken>,
+
+        @InjectRepository(EmailVerification)
+        private readonly emailVerificationRepo: Repository<EmailVerification>,
     ) {}
 
     // 회원가입 및 약관 동의 저장
@@ -36,27 +65,29 @@ export class AuthService {
         const passwordHash = await argon2.hash(dto.password);
 
         // 중복 검사
-        const dup = await this.prismaService.user.findFirst({
-            where: {
-                OR: [
-                    { userId: dto.userId },
-                    { phone: phoneDigits },
-                    ...(dto.email ? [{ email: dto.email }] : []),
-                ],
-            },
+        const dup = await this.userRepo.findOne({
+            where: [
+                { userId: dto.userId },
+                { phone: phoneDigits },
+                ...(dto.email ? [{ email: dto.email }] : []),
+            ],
             select: { userId: true, phone: true, email: true },
         });
+
         if (dup) {
-            if (dup.userId === dto.userId)
+            if (dup.userId === dto.userId) {
                 throw new ConflictException('이미 사용 중인 아이디입니다.');
-            if (dup.phone === phoneDigits)
+            }
+            if (dup.phone === phoneDigits) {
                 throw new ConflictException('이미 가입된 휴대폰 번호입니다.');
-            if (dto.email && dup.email === dto.email)
+            }
+            if (dto.email && dup.email === dto.email) {
                 throw new ConflictException('이미 가입된 이메일입니다.');
+            }
         }
 
-        const emailVerify = await this.prismaService.emailVerification.findUnique({
-            where: { email: dto.email },
+        const emailVerify = await this.emailVerificationRepo.findOne({
+            where: { email: dto.email ?? '' },
         });
 
         if (!emailVerify || !emailVerify.verifiedAt) {
@@ -64,84 +95,79 @@ export class AuthService {
         }
 
         try {
-            const created = await this.prismaService.$transaction(
-                async (tx) => {
-                    const user = await tx.user.create({
-                        data: {
-                            userId: dto.userId,
-                            name: dto.name,
-                            phone: phoneDigits,
-                            email: dto.email ?? null,
-                            passwordHash,
-                        },
-                        select: { userId: true },
+            const created = await this.dataSource.transaction(async (manager) => {
+                const user = await manager.getRepository(User).save({
+                    userId: dto.userId,
+                    name: dto.name,
+                    phone: phoneDigits,
+                    email: dto.email ?? null,
+                    passwordHash,
+                });
+
+                const termsRepo = manager.getRepository(Terms);
+                const userConsentRepo = manager.getRepository(UserConsent);
+
+                const now = new Date();
+
+                for (const c of dto.consents) {
+                    const termsIdNum = BigInt(c.termsId);
+
+                    const t = await termsRepo.findOne({
+                        where: { termsId: termsIdNum as any },
                     });
 
-                    // 2) 동의 저장 (privacy, tos 등 전달된 termsId 각각)
-                    const now = new Date();
-                    for (const c of dto.consents) {
-                        const termsIdNum = BigInt(c.termsId);
-                        const t = await tx.terms.findUnique({
-                            where: { termsId: termsIdNum },
-                        });
-                        if (!t)
-                            throw new NotFoundException(
-                                `약관이 존재하지 않습니다. termsId=${c.termsId}`,
-                            );
-
-                        // 운영 정책: 공개 & 시행본만 허용
-                        if (
-                            !(
-                                t.status === terms_status.PUBLISHED &&
-                                t.effectiveAt <= now
-                            )
-                        ) {
-                            throw new ConflictException(
-                                `아직 시행 전이거나 공개되지 않은 약관입니다. termsId=${c.termsId}`,
-                            );
-                        }
-
-                        const snapshot = t.contentHtml ?? t.contentMd ?? '';
-                        const contentHash = crypto
-                            .createHash('sha256')
-                            .update(snapshot, 'utf8')
-                            .digest('hex');
-
-                        await tx.userConsent.create({
-                            data: {
-                                userId: user.userId, // 문자열 FK
-                                termsId: t.termsId, // bigint
-                                termsVersion: t.version,
-                                contentSnapshot: snapshot || null,
-                                contentHash,
-                            },
-                        });
+                    if (!t) {
+                        throw new NotFoundException(
+                            `약관이 존재하지 않습니다. termsId=${c.termsId}`,
+                        );
                     }
-                    return user;
-                },
-            );
+
+                    // 운영 정책: 공개 & 시행본만 허용
+                    if (
+                        !(
+                            t.status === TermsStatus.PUBLISHED &&
+                            t.effectiveAt <= now
+                        )
+                    ) {
+                        throw new ConflictException(
+                            `아직 시행 전이거나 공개되지 않은 약관입니다. termsId=${c.termsId}`,
+                        );
+                    }
+
+                    const snapshot = t.contentHtml ?? t.contentMd ?? '';
+                    const contentHash = crypto
+                        .createHash('sha256')
+                        .update(snapshot, 'utf8')
+                        .digest('hex');
+
+                    await userConsentRepo.save({
+                        userId: user.userId,
+                        termsId: t.termsId,
+                        termsVersion: t.version,
+                        contentSnapshot: snapshot || null,
+                        contentHash,
+                    });
+                }
+
+                return user;
+            });
 
             return { ok: true, userId: created.userId };
         } catch (e: any) {
-            if (e?.code === 'P2002') {
-                const target = Array.isArray(e.meta?.target)
-                    ? e.meta.target.join(',')
-                    : String(e.meta?.target ?? '');
-                if (target.includes('user_id'))
-                    return Promise.reject(
-                        new ConflictException('이미 사용 중인 아이디입니다.'),
-                    );
-                if (target.includes('phone'))
-                    return Promise.reject(
-                        new ConflictException('이미 가입된 휴대폰 번호입니다.'),
-                    );
-                if (target.includes('email'))
-                    return Promise.reject(
-                        new ConflictException('이미 가입된 이메일입니다.'),
-                    );
-                return Promise.reject(
-                    new ConflictException('중복된 사용자 정보가 있습니다.'),
-                );
+            // Prisma P2002 대신 MySQL/MariaDB의 ER_DUP_ENTRY 등 처리
+            if (e instanceof QueryFailedError && (e as any).code === 'ER_DUP_ENTRY') {
+                // 에러 메시지 안에 어떤 unique 키인지 포함되어 있을 수 있음
+                const msg = String((e as any).sqlMessage ?? e.message ?? '');
+                if (msg.includes('user.PRIMARY') || msg.includes('user_id')) {
+                    throw new ConflictException('이미 사용 중인 아이디입니다.');
+                }
+                if (msg.includes('phone')) {
+                    throw new ConflictException('이미 가입된 휴대폰 번호입니다.');
+                }
+                if (msg.includes('email')) {
+                    throw new ConflictException('이미 가입된 이메일입니다.');
+                }
+                throw new ConflictException('중복된 사용자 정보가 있습니다.');
             }
             throw e;
         }
@@ -164,70 +190,58 @@ export class AuthService {
         deviceId: string,
         hadRtCookie: boolean | undefined,
     ) {
-        // 사용자 입력 데이터 검증
         const user = await this.validateUser(userId, password);
 
-        // 1) 해당 디바이스에 유효한 RT가 있는지 확인
-        const existing = await this.prismaService.refreshToken.findFirst({
+        // 해당 디바이스에 유효한 RT가 있는지 확인
+        const existing = await this.refreshTokenRepo.findOne({
             where: {
                 userId: user.userId,
                 deviceId,
-                revokedAt: null,
-                expiryDate: { gt: new Date() },
+                revokedAt: IsNull(),
+                expiryDate: MoreThan(new Date()),
             },
         });
 
-        // 정책:
-        // - DB에 유효 RT가 없으면 → 회전(신규 발급)
-        // - 유효 RT가 있어도 "쿠키 RT가 없었음" → 회전(정합성 복구)
-        // - 유효 RT가 있고 "쿠키 RT가 있었음" → 재사용(회전 X)
-        const mustRotate = !existing || !hadRtCookie
-
+        const mustRotate = !existing || !hadRtCookie;
         let refreshToken: string | undefined;
 
         if (mustRotate) {
             if (existing) {
-                await this.prismaService.refreshToken.update({
-                    where: { tokenId: existing.tokenId },
-                    data: { revokedAt: new Date() },
-                });
+                await this.refreshTokenRepo.update(
+                    { tokenId: existing.tokenId },
+                    { revokedAt: new Date() },
+                );
             }
 
             const { token, jti } = await this.signRefresh(
                 user.userId,
                 deviceId,
             );
-            const hashed: string = await argon2.hash(token);
+            const hashed = await argon2.hash(token);
 
-            const ms: number = this.ttlMs(
+            const ms = this.ttlMs(
                 process.env.JWT_REFRESH_EXPIRES ?? '30d',
             );
-            const expiryUtc = new Date(Date.now() + ms); // UTC 권장
+            const expiryUtc = new Date(Date.now() + ms);
 
-            await this.prismaService.refreshToken.upsert({
-                where: { userId_deviceId: { userId: user.userId, deviceId } },
-                update: {
-                    jti,
-                    tokenHash: hashed,
-                    expiryDate: expiryUtc,
-                    revokedAt: null,
-                },
-                create: {
+            await this.refreshTokenRepo.upsert(
+                {
                     userId: user.userId,
                     deviceId,
                     jti,
                     tokenHash: hashed,
                     expiryDate: expiryUtc,
+                    revokedAt: null,
                 },
-            });
+                ['userId', 'deviceId'],
+            );
 
-            refreshToken = token; // 회전/신규 발급 시에만 평문 반환
+            refreshToken = token;
         } else {
-            // 정상 일치 → 감사 정보만 (선택)
-            await this.prismaService.refreshToken.update({
-                where: { tokenId: existing!.tokenId },
-                data: { lastUsedAt: new Date() },
-            });
+            await this.refreshTokenRepo.update(
+                { tokenId: existing!.tokenId },
+                { lastUsedAt: new Date() },
+            );
         }
 
         const accessToken = await this.signAccessToken(user);
@@ -237,29 +251,31 @@ export class AuthService {
 
     // 사용자 검증
     private async validateUser(userId: string, password: string) {
-        const user = await this.prismaService.user.findUnique({
+        const user = await this.userRepo.findOne({
             where: { userId },
         });
-        if (!user)
+        if (!user) {
             throw new UnauthorizedException(
                 '아이디 또는 비밀번호가 일치하지 않습니다.',
             );
+        }
 
         const ok = await argon2.verify(user.passwordHash, password);
-        if (!ok)
+        if (!ok) {
             throw new UnauthorizedException(
                 '아이디 또는 비밀번호가 일치하지 않습니다.',
             );
+        }
 
         return user;
     }
 
-    // 토큰
-    private async signAccessToken(user: any) {
-        const sub: string = user.userId;
-        const name: string = user.name;
-        const role: string = user.role;
-        const approval: string = user.approval;
+    // Access Token
+    private async signAccessToken(user: User) {
+        const sub = user.userId;
+        const name = user.name;
+        const role = user.role;
+        const approval = user.approvalStatus;
 
         const accessPayload: Record<string, unknown> = {
             sub,
@@ -298,101 +314,110 @@ export class AuthService {
         return 30 * 24 * 60 * 60 * 1000;
     }
 
+    // RT 회전
     async rotate(userId: string, deviceId: string, oldRt: string) {
-        // 새 토큰 준비
         const { token: newRt, jti } = await this.signRefresh(userId, deviceId);
         const newHash = await argon2.hash(newRt);
         const ms = this.ttlMs(process.env.JWT_REFRESH_EXPIRES ?? '30d');
         const expiryUtc = new Date(Date.now() + ms);
 
-        await this.prismaService.$transaction(async (tx) => {
-            // 1) oldRt가 일치하는 활성 레코드만 선별적으로 revoke (방어적)
-            const candidate = await tx.refreshToken.findFirst({
+        await this.dataSource.transaction(async (manager) => {
+            const rtRepo = manager.getRepository(RefreshToken);
+
+            const candidate = await rtRepo.findOne({
                 where: {
                     userId,
                     deviceId,
-                    revokedAt: null,
-                    expiryDate: { gt: new Date() },
+                    revokedAt: IsNull(),
+                    expiryDate: MoreThan(new Date()),
                 },
             });
 
             if (candidate) {
-                const same = await argon2.verify(candidate.tokenHash, oldRt).catch(() => false);
+                const same = await argon2
+                    .verify(candidate.tokenHash, oldRt)
+                    .catch(() => false);
+
                 if (same) {
-                    await tx.refreshToken.update({
-                        where: { tokenId: candidate.tokenId },
-                        data: { revokedAt: new Date() },
-                    });
+                    await rtRepo.update(
+                        { tokenId: candidate.tokenId },
+                        { revokedAt: new Date() },
+                    );
                 } else {
-                    // 재사용/불일치 의심 시 정책에 따라 더 강하게 막을 수도 있음
-                    // 여기서는 조용히 넘어가되, 별도 로깅/알림 추천
+                    // 재사용/불일치 의심 시 로깅 등 추가 가능
                 }
             }
 
-            // 2) 새 RT 저장(기기별 단일 RT 보장)
-            await tx.refreshToken.upsert({
-                where: { userId_deviceId: { userId, deviceId } },
-                update: { jti, tokenHash: newHash, expiryDate: expiryUtc, revokedAt: null, lastUsedAt: new Date() },
-                create: { userId, deviceId, jti, tokenHash: newHash, expiryDate: expiryUtc, lastUsedAt: new Date() },
-            });
+            await rtRepo.upsert(
+                {
+                    userId,
+                    deviceId,
+                    jti,
+                    tokenHash: newHash,
+                    expiryDate: expiryUtc,
+                    revokedAt: null,
+                    lastUsedAt: new Date(),
+                },
+                ['userId', 'deviceId'],
+            );
         });
 
-        // 3) 새 AT 발급
-        const accessToken = await this.signAccessToken({ userId });
+        const accessToken = await this.signAccessToken(
+            await this.userRepo.findOneByOrFail({ userId }),
+        );
 
         return { accessToken, refreshToken: newRt };
-
     }
 
+    // 로그아웃 (RT 기준)
     async logoutByRt(userId: string, incomingRt: string) {
         if (incomingRt) {
-            const list = await this.prismaService.refreshToken.findMany({
+            const list = await this.refreshTokenRepo.find({
                 where: { userId },
             });
+
             for (const t of list) {
+                // 원 코드의 흐름 유지 (다만 이 부분은 hash 비교 로직을 점검해도 좋음)
                 if (
                     await argon2.verify(
                         await argon2.hash(incomingRt),
                         t.tokenHash,
                     )
                 ) {
-                    await this.prismaService.refreshToken.delete({
-                        where: { tokenId: t.tokenId },
-                    });
+                    await this.refreshTokenRepo.delete({ tokenId: t.tokenId });
                     return;
                 }
             }
         }
-        await this.prismaService.refreshToken.deleteMany({ where: { userId } });
+
+        await this.refreshTokenRepo.delete({ userId });
     }
 
+    // 이메일 인증 코드 발송
     async sendEmailVerification(email: string) {
-        const user = await this.prismaService.user.findUnique({ where: { email } });
-        if (user) throw new BadRequestException("이미 이메일 인증이 완료된 계정입니다.");
+        const user = await this.userRepo.findOne({ where: { email } });
+        if (user) {
+            throw new BadRequestException(
+                '이미 이메일 인증이 완료된 계정입니다.',
+            );
+        }
 
-        // 인증코드 생성
         const code = this.generateCode();
         const codeHash = await bcrypt.hash(code, 10);
-        const expiresAt = addMinutes(new Date(), 3); // 5분 유효 (원하시는 대로 조정)
+        const expiresAt = addMinutes(new Date(), 3); // 3분 유효
 
-        // EmailVerification upsert: 이메일당 1건만 유지
-        await this.prismaService.emailVerification.upsert({
-            where: { email },
-            update: {
+        await this.emailVerificationRepo.upsert(
+            {
+                email,
                 codeHash,
                 expiresAt,
                 requestedAt: new Date(),
                 verifiedAt: null,
                 tryCount: 0,
             },
-            create: {
-                email,
-                codeHash,
-                expiresAt,
-            },
-        });
+            ['email'],
+        );
 
-        // 실제 이메일 발송 (MailService는 이미 가지고 있다고 가정)
         await this.mailService.sendEmailVerificationCode(email, code);
     }
 
@@ -401,21 +426,22 @@ export class AuthService {
         return Math.floor(100000 + Math.random() * 900000).toString();
     }
 
+    // 이메일 인증 확인
     async confirmEmailVerification(email: string, code: string) {
-        const verification = await this.prismaService.emailVerification.findUnique({
+        const verification = await this.emailVerificationRepo.findOne({
             where: { email },
         });
 
         if (!verification) {
-            throw new BadRequestException('인증 요청 내역이 없습니다. 인증번호를 다시 요청해 주세요.');
+            throw new BadRequestException(
+                '인증 요청 내역이 없습니다. 인증번호를 다시 요청해 주세요.',
+            );
         }
 
-        // 이미 인증된 경우
         if (verification.verifiedAt) {
             throw new BadRequestException('이미 이메일 인증이 완료되었습니다.');
         }
 
-        // 만료 체크 (서버 기준)
         const now = new Date();
         if (verification.expiresAt < now) {
             throw new BadRequestException(
@@ -423,32 +449,28 @@ export class AuthService {
             );
         }
 
-        // 시도 횟수 제한
         if (verification.tryCount >= 5) {
             throw new ForbiddenException(
                 '인증 시도 횟수를 초과했습니다. 인증번호를 다시 요청해 주세요.',
             );
         }
 
-        // 코드 비교
         const isMatch = await bcrypt.compare(code, verification.codeHash);
         if (!isMatch) {
-            // 틀리면 tryCount 증가
-            await this.prismaService.emailVerification.update({
-                where: { email },
-                data: { tryCount: { increment: 1 } },
-            });
+            await this.emailVerificationRepo.update(
+                { email },
+                { tryCount: verification.tryCount + 1 },
+            );
+
             throw new BadRequestException('인증번호가 일치하지 않습니다.');
         }
 
-        // ✅ 성공: 트랜잭션으로 EmailVerification + User 같이 업데이트
-        // 1) 인증 기록 업데이트
-        await this.prismaService.emailVerification.update({
-            where: { email },
-            data: {
+        await this.emailVerificationRepo.update(
+            { email },
+            {
                 verifiedAt: now,
-                tryCount: verification.tryCount, // 그대로 두거나 0으로 초기화 선택 가능
+                tryCount: verification.tryCount,
             },
-        });
+        );
     }
 }

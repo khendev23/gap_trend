@@ -1,12 +1,15 @@
 // src/auth/auth.module.ts
 import { Module } from '@nestjs/common';
-import { PrismaService} from "../../prisma/prisma.service";
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from './user.entity';
+import { RefreshToken } from './refresh-token.entity';
+import { EmailVerification } from './email-verification.entity';
+import { UserConsent } from './user-consent.entity';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './jwt.guard';
-import { PrismaModule } from '../../prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
 import { MailModule } from '../mail/mail.module';
@@ -16,9 +19,10 @@ import { MailModule } from '../mail/mail.module';
         JwtModule.register({
             secret: process.env.JWT_ACCESS_SECRET,
         }),
-        PrismaModule, ConfigModule, MailModule
+        ConfigModule, MailModule,
+        TypeOrmModule.forFeature([User, RefreshToken, EmailVerification, UserConsent])
     ],
-    providers: [PrismaService, AuthService, JwtStrategy, JwtAuthGuard, MailService],
+    providers: [AuthService, JwtStrategy, JwtAuthGuard, MailService],
     controllers: [AuthController],
 })
 export class AuthModule {}
