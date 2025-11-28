@@ -27,6 +27,7 @@ import { KellyImage } from './kelly/kelly-image.entity';
                 password: config.get<string>('DB_PASS'),
                 database: config.get<string>('DB_NAME'),
                 entities: [KellyImage],
+                autoLoadEntities: true,
                 synchronize: false,
             }),
         }),

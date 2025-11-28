@@ -13,6 +13,7 @@ import { JwtAuthGuard } from './jwt.guard';
 import { ConfigModule } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
 import { MailModule } from '../mail/mail.module';
+import { Terms } from '../terms/terms.entity';
 
 @Module({
     imports: [
@@ -20,7 +21,7 @@ import { MailModule } from '../mail/mail.module';
             secret: process.env.JWT_ACCESS_SECRET,
         }),
         ConfigModule, MailModule,
-        TypeOrmModule.forFeature([User, RefreshToken, EmailVerification, UserConsent])
+        TypeOrmModule.forFeature([User, RefreshToken, EmailVerification, UserConsent, Terms])
     ],
     providers: [AuthService, JwtStrategy, JwtAuthGuard, MailService],
     controllers: [AuthController],
