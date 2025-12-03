@@ -473,4 +473,83 @@ export class AuthService {
             },
         );
     }
+
+    async findUserByIdAndEmail(userId: string, email: string) {
+        const trimmedId = userId?.trim();
+        const trimmedEmail = email?.trim();
+
+        if (!trimmedId || !trimmedEmail) {
+            throw new BadRequestException(
+                '아이디와 이메일을 모두 입력해 주세요.',
+            );
+        }
+
+        return this.userRepo.findOne({
+            where: {
+                userId: trimmedId,
+                email: trimmedEmail,
+            },
+        });
+    }
+
+    async sendPasswordResetCode(email: string, userId: string) {
+        const user = await this.userRepo.findOne({
+            where: { userId, email },
+        });
+
+        if (!user) {
+            throw new NotFoundException('일치하는 계정을 찾을 수 없습니다.');
+        }
+
+        // 1) 코드 생성
+        const code = this.generateCode(); // 6자리 숫자
+        const codeHash = await bcrypt.hash(code, 10);
+        const expiresAt = addMinutes(new Date(), 3); // 3분 유효
+
+        // 2) EmailVerification(재사용) 업데이트
+        await this.emailVerificationRepo.upsert(
+            {
+                email,
+                codeHash,
+                expiresAt,
+                requestedAt: new Date(),
+                verifiedAt: null,  // reset flow니까 항상 null
+                tryCount: 0,       // reset인 만큼 초기화
+            },
+            ['email'],
+        );
+
+        // 3) 메일 발송
+        await this.mailService.sendPasswordResetCode(email, code);
+
+        return { ok: true };
+    }
+
+    async resetPassword(userId: string, email: string, newPassword: string) {
+        const newHash = await argon2.hash(newPassword.trim());
+        const now = new Date();
+
+        await this.userRepo.update(
+            { userId: userId },
+            { passwordHash: newHash },
+        );
+
+        // 인증 정보 무효화
+        await this.emailVerificationRepo.update(
+            { email: email },
+            {
+                verifiedAt: now,   // 이미 있지만 다시 기록
+                expiresAt: now,    // 즉시 만료
+                tryCount: 0,
+            },
+        );
+
+        // 기존 Refresh Token 모두 무효화
+        await this.refreshTokenRepo.update(
+            { userId: userId },
+            { revokedAt: new Date() },
+        );
+
+        return { ok: true };
+    }
 }

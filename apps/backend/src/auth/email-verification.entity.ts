@@ -27,21 +27,21 @@ export class EmailVerification {
     email: string;
 
     @Column({
-        name: 'code_hash',
+        name: 'codeHash',
         type: 'varchar',
         length: 255,
     })
     codeHash: string;
 
     @Column({
-        name: 'expires_at',
+        name: 'expiresAt',
         type: 'timestamp',
         precision: 3,
     })
     expiresAt: Date;
 
     @CreateDateColumn({
-        name: 'requested_at',
+        name: 'requestedAt',
         type: 'timestamp',
         precision: 3,
         default: () => 'CURRENT_TIMESTAMP(3)',
@@ -49,7 +49,7 @@ export class EmailVerification {
     requestedAt: Date;
 
     @Column({
-        name: 'verified_at',
+        name: 'verifiedAt',
         type: 'timestamp',
         precision: 3,
         nullable: true,
@@ -57,7 +57,7 @@ export class EmailVerification {
     verifiedAt?: Date | null;
 
     @Column({
-        name: 'try_count',
+        name: 'tryCount',
         type: 'int',
         default: () => 0,
     })

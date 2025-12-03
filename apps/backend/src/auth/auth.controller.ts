@@ -24,6 +24,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, IsNull } from 'typeorm';
 import { RefreshToken } from './refresh-token.entity';
 
+import { NotFoundException } from '@nestjs/common';
+import { ForgotPasswordRequestDto } from './dto/forgot-password-request.dto';
+import { ForgotPasswordVerifyDto } from './dto/forgot-password-verify.dto';
+import { ForgotPasswordResetDto } from './dto/forgot-password-reset.dto';
+
+
 @Controller('api/auth')
 export class AuthController {
     constructor(
@@ -174,6 +180,56 @@ export class AuthController {
         await this.authService.logoutByRt(userId, rt);
         return { ok: true };
     }
+
+    // -----------------------------
+    // 비밀번호 찾기 / 재설정 플로우
+    // -----------------------------
+
+    // 1단계: 아이디 + 이메일 확인 & 인증메일 발송
+    @Post('forgot/request')
+    async forgotRequest(@Body() dto: ForgotPasswordRequestDto) {
+        // userId + email 일치하는 유저 조회 (없으면 404)
+        const user = await this.authService.findUserByIdAndEmail(
+            dto.userId,
+            dto.email,
+        );
+        if (!user) {
+            throw new NotFoundException('일치하는 정보가 없습니다.');
+        }
+
+        // 이 메서드는 별도로 구현 필요
+        // - 비밀번호 재설정용 인증코드를 생성 & 저장
+        // - dto.email로 메일 발송
+        await this.authService.sendPasswordResetCode(dto.email, user.userId);
+
+        return { ok: true };
+    }
+
+    // 2단계: 이메일로 받은 인증코드 검증
+    @Post('forgot/verify')
+    async forgotVerify(@Body() dto: ForgotPasswordVerifyDto) {
+        // userId + email + code 가 유효한지 검증 (없으면 예외)
+        await this.authService.confirmEmailVerification(
+            dto.email,
+            dto.code,
+        );
+
+        return { ok: true };
+    }
+
+    // 3단계: 새 비밀번호 설정
+    @Post('forgot/reset')
+    async forgotReset(@Body() dto: ForgotPasswordResetDto) {
+        // code가 아직 유효한지 최종 검증 + 비밀번호 변경
+        await this.authService.resetPassword(
+            dto.userId,
+            dto.email,
+            dto.newPassword,
+        );
+
+        return { ok: true };
+    }
+
 
     // 현재 로그인 사용자 정보
     @UseGuards(JwtAuthGuard)

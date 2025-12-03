@@ -53,4 +53,21 @@ export class MailService {
 
         await this.sendMail({ to, subject, text, html });
     }
+
+    async sendPasswordResetCode(to: string, code: string) {
+        const subject = '은혜와평강교회 비밀번호 재설정 인증번호';
+        const text = `인증번호는 ${code} 입니다. 3분 안에 입력해주세요.`;
+        const html = `
+            <div style="font-family: sans-serif;">
+                <h2>은혜와평강교회 비밀번호 재설정 인증</h2>
+                <p>요청하신 비밀번호 재설정을 위해 아래 인증번호를 입력해 주세요.</p>
+                <div style="font-size: 24px; font-weight: bold; margin:16px 0;">
+                    ${code}
+                </div>
+                <p>본 인증번호는 3분 동안 유효합니다.</p>
+            </div>
+        `;
+
+        await this.sendMail({ to, subject, text, html });
+    }
 }

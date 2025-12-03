@@ -14,6 +14,9 @@ import { ConfigModule } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
 import { MailModule } from '../mail/mail.module';
 import { Terms } from '../terms/terms.entity';
+import { ForgotPasswordRequestDto } from './dto/forgot-password-request.dto';
+import { ForgotPasswordVerifyDto } from './dto/forgot-password-verify.dto';
+import { ForgotPasswordResetDto } from './dto/forgot-password-reset.dto';
 
 @Module({
     imports: [
@@ -21,7 +24,7 @@ import { Terms } from '../terms/terms.entity';
             secret: process.env.JWT_ACCESS_SECRET,
         }),
         ConfigModule, MailModule,
-        TypeOrmModule.forFeature([User, RefreshToken, EmailVerification, UserConsent, Terms])
+        TypeOrmModule.forFeature([User, RefreshToken, EmailVerification, UserConsent, Terms, ForgotPasswordRequestDto, ForgotPasswordVerifyDto, ForgotPasswordResetDto])
     ],
     providers: [AuthService, JwtStrategy, JwtAuthGuard, MailService],
     controllers: [AuthController],
