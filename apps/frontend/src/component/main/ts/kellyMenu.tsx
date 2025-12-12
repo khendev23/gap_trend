@@ -31,7 +31,7 @@ export default function KellyMenu() {
     useEffect(() => {
         const ctrl = new AbortController();
         const base = process.env.NEXT_PUBLIC_API_BASE_URL; // 예: https://api.gapchurch.kr
-        const url = `/server-api/kelly/latest`;
+        const url = `/server-api/calliGr/latest`;
 
         (async () => {
             try {
@@ -39,6 +39,7 @@ export default function KellyMenu() {
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data: KellyItem[] = await res.json();
                 if (Array.isArray(data) && data.length) setItems(data);
+                console.log(data);
             } catch {
 
             }

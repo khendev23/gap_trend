@@ -33,11 +33,13 @@ export default function KellyBoard() {
         try {
             const base = API_BASE ? API_BASE.replace(/\/+$/, "") : "";
             const qs = new URLSearchParams({ limit: "6", ...(cursor ? { cursor } : {}) });
-            const url = `/server-api/kelly/list?${qs.toString()}`;
+            const url = `/server-api/calliGr/list?${qs.toString()}`;
 
             const res = await fetch(url, { cache: "no-store" });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data: KellyResponse = await res.json();
+
+            console.log(data);
 
             const newItems = Array.isArray(data.items) ? data.items : [];
             setItems((prev) => {

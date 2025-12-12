@@ -5,7 +5,7 @@ const API_PROXY_TARGET = (
     process.env.NEXT_PUBLIC_API_PROXY_TARGET ??
     (process.env.NODE_ENV === 'production'
         ? 'https://api.yourdomain.com' // ← 운영 백엔드 도메인으로 바꿔주세요
-        : 'http://localhost:4000')
+        : 'http://localhost:8080')
 ).replace(/\/+$/, '');
 
 const nextConfig: NextConfig = {
