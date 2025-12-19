@@ -7,9 +7,11 @@ export async function POST(req: NextRequest) {
     const rt = cookies.get(REFRESH_COOKIE)?.value ?? '';
     const at = cookies.get(ACCESS_COOKIE)?.value ?? '';
 
+    console.log(rt)
+
     await fetch('/server-api/auth/logout', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: rt, accessToken: at }),
+        body: JSON.stringify({ refreshToken: rt }),
     }).catch(() => {});
 
     const resp = NextResponse.json({ ok: true });
