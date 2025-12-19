@@ -25,6 +25,7 @@ export default function LoginPage() {
     const [forgotSubmitting, setForgotSubmitting] = useState(false);
     const [forgotError, setForgotError] = useState('');
     const [forgotMessage, setForgotMessage] = useState('');
+    const [isResetComplete, setIsResetComplete] = useState(false);
 
 
     const onChange = (e:any) => {
@@ -94,6 +95,7 @@ export default function LoginPage() {
         setForgotForm({ userId: '', email: '', code: '', newPassword: '' });
         setForgotError('');
         setForgotMessage('');
+        setIsResetComplete(false);
     };
 
     const closeForgotModal = () => {
@@ -210,6 +212,7 @@ export default function LoginPage() {
             }
 
             setForgotMessage('새 비밀번호가 설정되었습니다. 다시 로그인해 주세요.');
+            setIsResetComplete(true);
         } catch (err: any) {
             setForgotError(err.message ?? '비밀번호 변경에 실패했습니다.');
         } finally {
@@ -421,6 +424,7 @@ export default function LoginPage() {
                                         type="password"
                                         value={forgotForm.newPassword}
                                         onChange={onChangeForgot}
+                                        disabled={isResetComplete}
                                         className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                                     />
                                 </div>
@@ -431,20 +435,32 @@ export default function LoginPage() {
                                     <p className="text-sm text-emerald-600">{forgotMessage}</p>
                                 )}
                                 <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={closeForgotModal}
-                                        className="flex-1 rounded-2xl border border-slate-200 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                                    >
-                                        취소
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={forgotSubmitting}
-                                        className="flex-1 rounded-2xl bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
-                                    >
-                                        {forgotSubmitting ? '변경 중…' : '비밀번호 변경'}
-                                    </button>
+                                    {isResetComplete ? (
+                                        <button
+                                            type="button"
+                                            onClick={closeForgotModal}
+                                            className="w-full rounded-2xl bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                                        >
+                                            확인
+                                        </button>
+                                    ) : (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={closeForgotModal}
+                                                className="flex-1 rounded-2xl border border-slate-200 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                            >
+                                                취소
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={forgotSubmitting}
+                                                className="flex-1 rounded-2xl bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+                                            >
+                                                {forgotSubmitting ? '변경 중…' : '비밀번호 변경'}
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </form>
                         )}

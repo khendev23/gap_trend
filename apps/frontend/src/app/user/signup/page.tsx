@@ -100,21 +100,22 @@ export default function SignUpPage() {
     useEffect(() => {
         if (!ok) return;
 
-        setRedirectIn(5);                 // 5초부터 시작
+        setRedirectIn(5);
+
         const timer = setInterval(() => {
-            setRedirectIn((prev) => {
-                if (prev === null) return null;
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    router.push('/user/login'); // 0초 되면 이동
-                    return 0;
-                }
-                return prev - 1;
-            });
+            setRedirectIn((prev) => (prev == null ? null : Math.max(prev - 1, 0)));
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [ok, router]);
+    }, [ok]);
+
+    useEffect(() => {
+        if (!ok) return;
+        if (redirectIn === 0) {
+            router.push('/user/login');
+        }
+    }, [ok, redirectIn, router]);
+
 
     useEffect(() => {
         // 인증 요청 안 했거나, 이미 인증 끝났으면 타이머 안 돌림
