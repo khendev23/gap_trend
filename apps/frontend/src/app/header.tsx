@@ -98,7 +98,7 @@ const NAV: Array<{
 
 type AuthUser = {
     id: string;
-    name?: string | null;
+    username?: string | null;
     role?: string | null;
 } | null;
 
@@ -146,7 +146,7 @@ export default function Header({user}: AppHeaderProps) {
     const handleLogout = async () => {
         const res = await fetch('/api/auth/logout', {
             method: 'POST',
-
+            credentials: 'include',
         });
         if (!res.ok) {
             const m = await res.json().catch(() => ({}));
@@ -166,7 +166,7 @@ export default function Header({user}: AppHeaderProps) {
                     {user ? (
                         <div className="flex items-center gap-2 max-w-[40vw]">
                             <span className="hidden sm:inline text-xs md:text-sm text-gray-700 truncate">
-                                {user.name ?? "사용자"} 성도님 환영합니다
+                                {user.username ?? "사용자"} 성도님 환영합니다
                             </span>
 
                             {/* 내정보 버튼 - 모바일에서는 아이콘만, 데스크탑에서만 텍스트 */}

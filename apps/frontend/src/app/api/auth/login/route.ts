@@ -59,5 +59,13 @@ export async function POST(req: NextRequest) {
         });
     }
 
+    resp.cookies.set("session_user", JSON.stringify(data.user), {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7, // 7일 예시
+        // secure: process.env.NODE_ENV === "production",
+    });
+
     return resp;
 }

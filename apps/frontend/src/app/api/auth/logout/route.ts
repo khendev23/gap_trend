@@ -9,13 +9,23 @@ export async function POST(req: NextRequest) {
 
     console.log(rt)
 
-    await fetch('/server-api/auth/logout', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: rt }),
-    }).catch(() => {});
+    let r: Response | null = null;
+
+    const logoutUrl = new URL('/server-api/auth/login', req.url);
+
+    try {
+        r = await fetch(logoutUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken: rt }),
+        });
+    } catch (e) {
+        console.log(e)
+    }
 
     const resp = NextResponse.json({ ok: true });
     resp.cookies.set(ACCESS_COOKIE, '', { ...cookieOpts.access, maxAge: 0 });
     resp.cookies.set(REFRESH_COOKIE, '', { ...cookieOpts.refresh, maxAge: 0 });
+    resp.cookies.delete("session_user");
     return resp;
 }
