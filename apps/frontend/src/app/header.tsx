@@ -166,13 +166,13 @@ export default function Header({user}: AppHeaderProps) {
                     {user ? (
                         <div className="flex items-center gap-2 max-w-[40vw]">
                             <span className="hidden sm:inline text-xs md:text-sm text-gray-700 truncate">
-                                {user.username ?? "사용자"} 성도님 환영합니다
+                                {user.username ?? "사용자"}님 환영합니다
                             </span>
 
                             {/* 내정보 버튼 - 모바일에서는 아이콘만, 데스크탑에서만 텍스트 */}
                             <button
                                 onClick={() => router.push("/mypage")}
-                                className="flex items-center justify-center rounded border border-blue-200 bg-blue-50 text-blue-600 text-xs md:text-sm px-2 md:px-3 py-1 hover:bg-blue-100 transition"
+                                className="flex items-center justify-center rounded border border-blue-200 bg-blue-50 text-blue-600 text-xs md:text-sm px-1.5 md:px-2 py-0.5 hover:bg-blue-100 transition"
                                 title="내정보"
                             >
                                 <span className="md:hidden">⚙️</span>
@@ -182,7 +182,7 @@ export default function Header({user}: AppHeaderProps) {
                             {/* 로그아웃 버튼 - 작은 원형 아이콘 느낌으로 */}
                             <button
                                 onClick={handleLogout}
-                                className="flex items-center justify-center w-8 h-8 md:w-auto md:px-3 md:py-1 rounded-full md:rounded bg-red-50 text-red-600 text-xs md:text-sm border border-red-200 hover:bg-red-100 transition"
+                                className="flex items-center justify-center rounded border md:px-2 py-0.5 md:rounded bg-red-50 text-red-600 text-xs md:text-sm border border-red-200 hover:bg-red-100 transition"
                                 title="로그아웃"
                             >
                                 <span className="md:hidden">🚪</span>

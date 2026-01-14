@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import React from "react";
 import {useEffect, useState} from "react";
+import { useAuthStore } from "@/app/lib/useAuthStore";
 
 interface NoticeDetailProps {
     id: string;
@@ -19,6 +20,7 @@ type noticeItem = {
 
 // 공지사항 게시글 상세 (모바일 퍼스트)
 export default function NoticeDetail({ id }: NoticeDetailProps) {
+    const user = useAuthStore((state) => state.user);
     const router = useRouter();
     const [noticeItems, setNoticeItems] = useState<noticeItem[]>([]);
 
@@ -45,6 +47,35 @@ export default function NoticeDetail({ id }: NoticeDetailProps) {
         })();
     }, [id]); // id도 deps에 넣어 주세요
 
+    const handleGoList = (category: string) => {
+        // 카테고리에 맞는 경로로 이동
+        const path = category === "notice" ? "/notice" : "/news";
+        router.push(path);
+    };
+
+    const handleShare = async (title: string) => {
+        const shareData = {
+            title: title,
+            text: '교회 소식을 확인해보세요.',
+            url: window.location.href, // 현재 상세 페이지 주소
+        };
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                // Web Share API 미지원 시 클립보드 복사
+                await navigator.clipboard.writeText(window.location.href);
+                alert("링크가 복사되었습니다.");
+            }
+        } catch (err) {
+            console.log("공유 실패:", err);
+        }
+    };
+
+    const handleGoPage = (id: string) => {
+        router.push(`/notice/write?id=${id}`);
+    }
 
     return (
         <div className="min-h-screen bg-white text-gray-900 pb-6">
@@ -81,58 +112,80 @@ export default function NoticeDetail({ id }: NoticeDetailProps) {
             {/* 본문 */}
             <main className="mx-auto max-w-xl px-4">
                 {/* 제목 */}
-                {noticeItems.map(notice => (
-                    <React.Fragment key={notice.id}>
-                        <h2 className="mt-4 text-lg font-semibold leading-snug">{notice.title}</h2>
-                        {/* 메타 */}
-                        <div className="mt-1 text-sm text-gray-500">
-                            <span>{formatDateK(notice.date)}</span>
-                            <span className="mx-1">·</span>
-                            <span>작성자: {notice.author}</span>
-                        </div>
+                {noticeItems.map(notice => {
+                    // 루프 내부에서 개별 notice 객체의 author와 비교
+                    const isMine = user && user.id === notice.author;
 
-                        {/* 구분선 */}
-                        <hr className="mt-3 border-gray-200" />
+                    return (
+                        <React.Fragment key={notice.id}>
+                            <h2 className="mt-4 text-lg font-semibold leading-snug">{notice.title}</h2>
+                            {/* 메타 */}
+                            <div className="mt-1 text-sm text-gray-500">
+                                <span>{formatDateK(notice.date)}</span>
+                                <span className="mx-1">·</span>
+                                <span>작성자: {notice.author}</span>
+                            </div>
 
-                        {/* 본문 콘텐츠 */}
-                        <section className="prose prose-sm mt-4 max-w-none text-gray-800 prose-p:leading-relaxed prose-li:leading-relaxed">
-                            {notice.content}
-                        </section>
+                            {/* 구분선 */}
+                            <hr className="mt-3 border-gray-200" />
 
-                        {/* 첨부파일 (옵션) */}
-                        {notice.attachments?.length > 0 && (
-                            <section className="mt-6">
-                                <h3 className="text-sm font-semibold text-gray-900">첨부파일</h3>
-                                <ul className="mt-2 space-y-2">
-                                    {notice.attachments.map((f) => (
-                                        <li key={f.url} className="flex items-center justify-between rounded-xl border bg-white px-3 py-2">
-                                            <div className="min-w-0">
-                                                <p className="truncate text-sm font-medium text-gray-900">{f.name}</p>
-                                                <p className="text-xs text-gray-500">{f.size}</p>
-                                            </div>
-                                            <a
-                                                href={f.url}
-                                                className="shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                                            >
-                                                다운로드
-                                            </a>
-                                        </li>
-                                    ))}
-                                </ul>
+                            {/* 본문 콘텐츠 */}
+                            <section className="prose prose-sm mt-4 max-w-none text-gray-800 prose-p:leading-relaxed prose-li:leading-relaxed">
+                                <div
+                                    dangerouslySetInnerHTML={{ __html: notice.content }}
+                                    className="break-words"
+                                />
                             </section>
-                        )}
 
-                        {/* 하단 버튼 */}
-                        <div className="mt-8 flex gap-2">
-                            <button className="flex-1 rounded-xl border bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 active:bg-gray-100">
-                                목록
-                            </button>
-                            <button className="flex-1 rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white active:opacity-90">
-                                공유
-                            </button>
-                        </div>
-                    </React.Fragment>
-                ))}
+                            {/* 첨부파일 (옵션) */}
+                            {notice.attachments?.length > 0 && (
+                                <section className="mt-6">
+                                    <h3 className="text-sm font-semibold text-gray-900">첨부파일</h3>
+                                    <ul className="mt-2 space-y-2">
+                                        {notice.attachments.map((f) => (
+                                            <li key={f.url} className="flex items-center justify-between rounded-xl border bg-white px-3 py-2">
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-medium text-gray-900">{f.name}</p>
+                                                    <p className="text-xs text-gray-500">{f.size}</p>
+                                                </div>
+                                                <a
+                                                    href={f.url}
+                                                    className="shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                                >
+                                                    다운로드
+                                                </a>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </section>
+                            )}
+
+                            {/* 하단 버튼 */}
+                            <div className="mt-8 flex gap-2">
+                                {isMine &&
+                                    <button
+                                        onClick={() => handleGoPage(id)}
+                                        className="flex-1 rounded-xl border bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 active:bg-gray-100"
+                                    >
+                                        수정
+                                    </button>
+                                }
+                                <button
+                                    onClick={() => handleGoList("notice")}
+                                    className="flex-1 rounded-xl border bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 active:bg-gray-100"
+                                >
+                                    목록
+                                </button>
+                                <button
+                                    onClick={() => handleShare(notice.title)}
+                                    className="flex-1 rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white active:opacity-90"
+                                >
+                                    공유
+                                </button>
+                            </div>
+                        </React.Fragment>
+                    )
+                })}
             </main>
         </div>
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import {useState, useMemo, useEffect} from "react";
 import Link from "next/link";
 
 interface Post {
@@ -14,51 +14,46 @@ interface Post {
 export default function MobileBulletinBoard() {
     const [q, setQ] = useState<string>("");
     const [category, setCategory] = useState<null | "notice" | "news">("notice");
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
 
     function getDetailHref(p: Post) {
         return p.category === "notice" ? `/notice/${p.id}` : `/news/${p.id}`;
     }
 
-    const posts: Post[] = [
-        {
-            id: 1,
-            title: "Notice Title",
-            body: "This is the content of the notice.",
-            isNotice: true,
-            category: "notice",
-        },
-        {
-            id: 2,
-            title: "Post Title",
-            body: "Here is the content of the post.",
-            category: "news",
-        },
-        {
-            id: 3,
-            title: "Post Title",
-            body: "The content of the post goes here.",
-            category: "news",
-        },
-        {
-            id: 4,
-            title: "Long Post Title",
-            body: "The content of the post goes here",
-            category: "news",
-        },
-        {
-            id: 5,
-            title: "Post Title",
-            body: "Here is the content of the post",
-            category: "news",
-        },
-        {
-            id: 6,
-            title: "Another Notice",
-            body: "Important church notice content.",
-            isNotice: true,
-            category: "notice",
-        },
-    ];
+    useEffect(() => {
+        const ctrl = new AbortController();
+
+        const fetchPosts = async () => {
+            try {
+                setIsLoading(true);
+                const res = await fetch('/server-api/notices/noticeLists', {
+                    signal: ctrl.signal,
+                    cache: 'no-store',
+                });
+
+                if (!res.ok) {
+                    throw new Error(`서버 에러: ${res.status}`);
+                }
+
+                const data = (await res.json()) as Post[];
+                console.log(data);
+                setPosts(data); // 데이터 상태 업데이트
+            } catch (err: any) {
+                if (err.name !== 'AbortError') {
+                    console.error("Fetch error:", err);
+                    setError(err.message);
+                }
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchPosts();
+
+        return () => ctrl.abort();
+    }, []);
 
     const filtered = useMemo(() => {
         const query = q.trim().toLowerCase();
@@ -70,7 +65,7 @@ export default function MobileBulletinBoard() {
                     p.title.toLowerCase().includes(query) ||
                     p.body.toLowerCase().includes(query)
             );
-    }, [q, category]);
+    }, [q, category, posts]);
 
     // 예시: 실제로는 로그인 세션/권한 API로 대체
     const isAdmin: boolean = true; // 👉 true면 업로드 버튼 보임
@@ -198,63 +193,67 @@ export default function MobileBulletinBoard() {
                     </FilterButton>
                 </div>
 
-                <ul role="list" className="divide-y divide-gray-200">
-                    {filtered.map((p) => (
-                        <li key={p.id} className="py-3 md:py-4">
-                            <Link
-                                href={getDetailHref(p)}
-                                aria-label={`${p.title} 상세 보기`}
-                                className="block rounded-xl p-3 md:p-4 -m-3 hover:bg-gray-50 active:bg-gray-100 transition"
-                            >
-                                <article className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                        <h2 className="text-base md:text-lg font-semibold leading-6">
-                                            {p.isNotice && (
-                                                <span className="mr-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 align-middle">
-                                                    공지
+                {isLoading ? (
+                    <div className="py-20 text-center">데이터를 불러오는 중입니다...</div>
+                ) : error ? (
+                    <div className="py-20 text-center text-red-500">{error}</div>
+                ) : (
+                    <ul role="list" className="divide-y divide-gray-200">
+                        {filtered.map((p) => (
+                            <li key={p.id} className="py-3 md:py-4">
+                                <Link
+                                    href={getDetailHref(p)}
+                                    aria-label={`${p.title} 상세 보기`}
+                                    className="block rounded-xl p-3 md:p-4 -m-3 hover:bg-gray-50 active:bg-gray-100 transition"
+                                >
+                                    <article className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <h2 className="text-base md:text-lg font-semibold leading-6">
+                                                {p.isNotice && (
+                                                    <span className="mr-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 align-middle">
+                                                        공지
+                                                    </span>
+                                                )}
+                                                {!p.isNotice && (
+                                                    <span className="mr-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 align-middle">
+                                                        소식
+                                                    </span>
+                                                )}
+                                                <span className="align-middle line-clamp-1">
+                                                    {p.title}
                                                 </span>
-                                            )}
-                                            {!p.isNotice && (
-                                                <span className="mr-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 align-middle">
-                                                    소식
-                                                </span>
-                                            )}
-                                            <span className="align-middle line-clamp-1">
-                                                {p.title}
-                                            </span>
-                                        </h2>
-                                        <p className="mt-1 line-clamp-2 text-sm md:text-[0.95rem] text-gray-600">
-                                            {p.body}
-                                        </p>
-                                    </div>
+                                            </h2>
 
-                                    {/* 우측 화살표 아이콘 (탭 가능 영역 강조) */}
-                                    <div className="shrink-0 self-center text-gray-400">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 24 24"
-                                            className="h-5 w-5 md:h-6 md:w-6"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            aria-hidden="true"
-                                        >
-                                            <path d="M9 18l6-6-6-6" />
-                                        </svg>
-                                    </div>
-                                </article>
-                            </Link>
-                        </li>
-                    ))}
+                                        </div>
 
-                    {filtered.length === 0 && (
-                        <li className="py-16 text-center text-sm text-gray-500">
-                            검색 결과가 없습니다.
-                        </li>
-                    )}
-                </ul>
+                                        {/* 우측 화살표 아이콘 (탭 가능 영역 강조) */}
+                                        <div className="shrink-0 self-center text-gray-400">
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                viewBox="0 0 24 24"
+                                                className="h-5 w-5 md:h-6 md:w-6"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                aria-hidden="true"
+                                            >
+                                                <path d="M9 18l6-6-6-6" />
+                                            </svg>
+                                        </div>
+                                    </article>
+                                </Link>
+                            </li>
+                        ))}
+
+                        {filtered.length === 0 && (
+                            <li className="py-16 text-center text-sm text-gray-500">
+                                검색 결과가 없습니다.
+                            </li>
+                        )}
+                    </ul>
+                )}
             </main>
 
             {/* 📱 하단 고정 검색바 (모바일 전용) */}

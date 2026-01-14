@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/app/header"
 import Footer from "@/app/footer";
 import { getUserFromCookie } from "@/app/lib/auth";
+import AuthInitializer from "@/component/auth/AuthInitializer";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -26,6 +27,7 @@ export default async function RootLayout({children}: Readonly<{children: React.R
     return (
         <html lang="en">
             <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+                <AuthInitializer serverUser={user} />
                 <Header user={user}/>
                     <main>
                         {children}
