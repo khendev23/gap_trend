@@ -43,6 +43,13 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json();
 
+    // 🚨 [디버깅용 로그 추가]
+    console.log("=== 백엔드 응답 데이터 확인 ===");
+    console.log("Access Token:", !!data.accessToken); // true여야 함
+    console.log("Refresh Token:", data.refreshToken); // 여기가 undefined인지 확인!!
+    console.log("Refresh Cookie Option:", cookieOpts.refresh);
+    console.log("============================");
+
     const resp = NextResponse.json({user: data.user});
     resp.cookies.set(ACCESS_COOKIE, data.accessToken, cookieOpts.access);
     if (data.refreshToken) {

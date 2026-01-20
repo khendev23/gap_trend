@@ -23,13 +23,12 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const emailRegexFinal = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type TermsDoc = {
-    termsId: string;
+    id: string;
     slug: string;       // 'privacy' | 'tos'
     version: number;
     locale: string;
     title: string;
-    contentHtml?: string;
-    contentMd?: string;
+    content: string;
     status: 'DRAFT' | 'PUBLISHED';
     effectiveAt: string; // ISO
 };
@@ -270,8 +269,8 @@ export default function SignUpPage() {
                     password: form.password,
                     email: form.email,           // 있으면 전송
                     consents: [
-                        { termsId: String(privacy?.termsId) }, // 개인정보 처리방침
-                        { termsId: String(tos?.termsId) },     // 이용약관
+                        { termsId: String(privacy?.id) }, // 개인정보 처리방침
+                        { termsId: String(tos?.id) },     // 이용약관
                     ],
                     userAgent: navigator.userAgent,
                 }),
@@ -333,7 +332,7 @@ export default function SignUpPage() {
             setEmailExpireIn(180);
         } catch (err: any) {
             setEmailSentMsg(
-                err?.message || '인증 메일 전송 중 오류가 발생했습니다.'
+                '인증 메일 전송 중 오류가 발생했습니다.'
             );
         } finally {
             setEmailSending(false);
@@ -412,10 +411,10 @@ export default function SignUpPage() {
                                     {termsError && <p className="text-red-600">{termsError}</p>}
                                     {!loadingTerms && !termsError && (
                                         privacy ? (
-                                            privacy.contentHtml ? (
-                                                <div dangerouslySetInnerHTML={{ __html: privacy.contentHtml }} />
+                                            privacy.content ? (
+                                                <div dangerouslySetInnerHTML={{ __html: privacy.content }} />
                                             ) : (
-                                                <pre className="whitespace-pre-wrap">{privacy.contentMd ?? '내용이 없습니다.'}</pre>
+                                                <pre className="whitespace-pre-wrap">{'내용이 없습니다.'}</pre>
                                             )
                                         ) : (
                                             <p>개인정보 처리방침 최신본이 없습니다.</p>
@@ -442,10 +441,10 @@ export default function SignUpPage() {
                                     {termsError && <p className="text-red-600">{termsError}</p>}
                                     {!loadingTerms && !termsError && (
                                         tos ? (
-                                            tos.contentHtml ? (
-                                                <div dangerouslySetInnerHTML={{ __html: tos.contentHtml }} />
+                                            tos.content ? (
+                                                <div dangerouslySetInnerHTML={{ __html: tos.content}} />
                                             ) : (
-                                                <pre className="whitespace-pre-wrap">{tos.contentMd ?? '내용이 없습니다.'}</pre>
+                                                <pre className="whitespace-pre-wrap">{'내용이 없습니다.'}</pre>
                                             )
                                         ) : (
                                             <p>이용약관 최신본이 없습니다.</p>

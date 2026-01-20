@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import HeaderMenu from "@/component/main/ts/headerMenu";
-import {router} from "next/client";
+import { useRouter } from 'next/navigation';
 
 type MegaItem = { label: string; href: string; desc?: string };
 type MegaGroup = { title: string; items: MegaItem[] };
@@ -108,6 +108,8 @@ type AppHeaderProps = {
 
 export default function Header({user}: AppHeaderProps) {
 
+    const router = useRouter();
+
     // 모바일 사이드 메뉴
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -171,7 +173,7 @@ export default function Header({user}: AppHeaderProps) {
 
                             {/* 내정보 버튼 - 모바일에서는 아이콘만, 데스크탑에서만 텍스트 */}
                             <button
-                                onClick={() => router.push("/mypage")}
+                                onClick={() => router.push("/user/mypage")}
                                 className="flex items-center justify-center rounded border border-blue-200 bg-blue-50 text-blue-600 text-xs md:text-sm px-1.5 md:px-2 py-0.5 hover:bg-blue-100 transition"
                                 title="내정보"
                             >
@@ -182,7 +184,7 @@ export default function Header({user}: AppHeaderProps) {
                             {/* 로그아웃 버튼 - 작은 원형 아이콘 느낌으로 */}
                             <button
                                 onClick={handleLogout}
-                                className="flex items-center justify-center rounded border md:px-2 py-0.5 md:rounded bg-red-50 text-red-600 text-xs md:text-sm border border-red-200 hover:bg-red-100 transition"
+                                className="flex items-center justify-center rounded border bg-red-50 text-red-600 text-xs md:text-sm px-1.5 md:px-2 py-0.5 border-red-200 hover:bg-red-100 transition"
                                 title="로그아웃"
                             >
                                 <span className="md:hidden">🚪</span>
