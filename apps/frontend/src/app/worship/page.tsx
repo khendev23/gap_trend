@@ -346,16 +346,18 @@ export default function WorshipBoard() {
                 </ul>
             </main>
 
-            {/* 하단 고정 검색바 - 모바일 전용 */}
+            {/* 하단 고정 검색바 - 모바일 전용 (떠있는 스타일) */}
+            {/* 하단 고정 검색바 - 모바일 전용 (고정형 + 여백 추가) */}
             <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-white/95 backdrop-blur md:hidden">
-                <div className="mx-auto max-w-xl px-4 py-3 pb-[env(safe-area-inset-bottom)]">
+                {/* pb 계산식 수정: 안전영역 + 20px 추가 */}
+                <div className="mx-auto max-w-xl px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+10px)]">
                     <label className="relative block">
                         <span className="sr-only">Search</span>
                         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 viewBox="0 0 24 24"
-                                className="h-5 w-5"
+                                className="h-5 w-5 text-gray-400"
                                 fill="none"
                                 stroke="currentColor"
                                 strokeWidth="2"
@@ -368,7 +370,7 @@ export default function WorshipBoard() {
                             value={q}
                             onChange={(e) => setQ(e.target.value)}
                             placeholder="예배 게시글 검색"
-                            className="w-full rounded-2xl bg-gray-100 px-10 py-2.5 text-base outline-none ring-1 ring-transparent focus:ring-gray-300"
+                            className="w-full rounded-2xl bg-gray-100 px-10 py-2.5 text-base outline-none ring-1 ring-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all"
                             type="search"
                             inputMode="search"
                         />

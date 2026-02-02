@@ -20,6 +20,12 @@ export default function KellyBoard() {
     // 모달 상태 (선택 이미지)
     const [selected, setSelected] = useState<KellyItem | null>(null);
 
+    // 업로드 모달 상태
+    const [isUploadOpen, setIsUploadOpen] = useState(false);
+    const [uploadFile, setUploadFile] = useState<File | null>(null);
+    const [uploadPreview, setUploadPreview] = useState<string>("");
+    const [uploadDescription, setUploadDescription] = useState("");
+
     const sentinelRef = useRef<HTMLDivElement | null>(null);
     const loadingRef = useRef(false); // 동시 호출 방지
 
@@ -88,13 +94,70 @@ export default function KellyBoard() {
 
     // ESC로 모달 닫기
     useEffect(() => {
-        if (!selected) return;
+        if (!selected && !isUploadOpen) return;
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") setSelected(null);
+            if (e.key === "Escape") {
+                setSelected(null);
+                setIsUploadOpen(false);
+            }
         };
         document.addEventListener("keydown", onKey);
         return () => document.removeEventListener("keydown", onKey);
-    }, [selected]);
+    }, [selected, isUploadOpen]);
+
+    // 업로드 미리보기
+    useEffect(() => {
+        if (!uploadFile) {
+            setUploadPreview("");
+            return;
+        }
+        const url = URL.createObjectURL(uploadFile);
+        setUploadPreview(url);
+        return () => URL.revokeObjectURL(url);
+    }, [uploadFile]);
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleUploadSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!uploadFile) {
+            alert("사진을 선택해주세요.");
+            return;
+        }
+
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+
+        try {
+            const formData = new FormData();
+            formData.append("file", uploadFile);
+            if (uploadDescription) {
+                formData.append("description", uploadDescription);
+            }
+
+            const res = await fetch("/server-api/calliGr/upload", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!res.ok) throw new Error(`업로드 실패 (HTTP ${res.status})`);
+
+            alert("업로드가 완료되었습니다.");
+            
+            // 모달 닫기 및 초기화
+            setIsUploadOpen(false);
+            setUploadFile(null);
+            setUploadDescription("");
+
+            // 목록 새로고침 (첫 페이지부터 다시 불러오기)
+            setItems([]);
+            fetchPage(null);
+        } catch (e: any) {
+            alert(e?.message ?? "업로드 중 오류가 발생했습니다.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-white text-gray-900">
@@ -123,7 +186,7 @@ export default function KellyBoard() {
                     <h1 className="text-base md:text-lg font-bold">켈리 게시판</h1>
 
                     <button
-                        onClick={() => alert("업로드 기능 연결")}
+                        onClick={() => setIsUploadOpen(true)}
                         className="rounded-lg px-3 py-2 text-xs md:text-sm font-medium text-gray-700 hover:bg-gray-100 active:scale-95"
                     >
                         업로드
@@ -213,12 +276,14 @@ export default function KellyBoard() {
                             </button>
                         </div>
                         <div className="flex items-center justify-between p-4 border-t">
-                            <a
-                                href={`/server-api/kelly/${selected.id}/download`}
-                                className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-                            >
-                                다운로드
-                            </a>
+                            <div className="flex flex-col">
+                                <a
+                                    href={`/server-api/kelly/${selected.id}/download`}
+                                    className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90 text-center"
+                                >
+                                    다운로드
+                                </a>
+                            </div>
                             <button
                                 onClick={() => setSelected(null)}
                                 className="rounded-xl border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -226,6 +291,87 @@ export default function KellyBoard() {
                                 닫기
                             </button>
                         </div>
+                        {selected.alt && (
+                            <div className="px-4 pb-4">
+                                <p className="text-sm text-gray-600">{selected.alt}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* 업로드 모달 */}
+            {isUploadOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsUploadOpen(false);
+                    }}
+                >
+                    <div className="relative max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
+                        <div className="flex items-center justify-between border-b px-4 py-3">
+                            <h2 className="text-base font-semibold">사진 업로드</h2>
+                            <button
+                                onClick={() => setIsUploadOpen(false)}
+                                className="rounded-lg p-2 hover:bg-gray-100"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleUploadSubmit} className="p-4 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    사진 (필수)
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    required
+                                    onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                                />
+                                {uploadPreview && (
+                                    <div className="mt-3 relative aspect-square w-full overflow-hidden rounded-xl bg-gray-100">
+                                        <img
+                                            src={uploadPreview}
+                                            alt="미리보기"
+                                            className="absolute inset-0 h-full w-full object-cover"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    설명 (선택)
+                                </label>
+                                <textarea
+                                    value={uploadDescription}
+                                    onChange={(e) => setUploadDescription(e.target.value)}
+                                    placeholder="사진에 대한 설명을 입력하세요."
+                                    rows={3}
+                                    className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-300"
+                                />
+                            </div>
+
+                            <div className="flex gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsUploadOpen(false)}
+                                    className="flex-1 rounded-xl border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                >
+                                    취소
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="flex-1 rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting ? "업로드 중..." : "올리기"}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
