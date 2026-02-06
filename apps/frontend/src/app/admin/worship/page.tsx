@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+type Category = "sundayAM" | "sundayPM" | "wednesday" | "friday" | "youth" | "student" | "nurture" | "special";
 
 type Worship = {
   id: number;
   title: string;
   date: string;
-  category: string;
+  category: Category;
   preacher: string;
   url?: string;
   verse?: string;
@@ -48,16 +50,66 @@ const initialWorships: Worship[] = [
 export default function WorshipManagementPage() {
   const [worships, setWorships] = useState<Worship[]>(initialWorships);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   // 폼 상태
   const [fDate, setFDate] = useState('');
-  const [fCategory, setFCategory] = useState('sundayAM');
+  const [fCategory, setFCategory] = useState<Category>('sundayAM');
   const [fTitle, setFTitle] = useState('');
   const [fPreacher, setFPreacher] = useState('');
   const [fVerse, setFVerse] = useState('');
   const [fUrl, setFUrl] = useState('');
   const [fContent, setFContent] = useState('');
   const [fThumbFile, setFThumbFile] = useState<File | null>(null);
+  const [thumbPreview, setThumbPreview] = useState<string>("");
+  const [thumbSource, setThumbSource] = useState<"preset" | "file">("preset");
+  const [selectedPreset, setSelectedPreset] = useState<string>("");
+
+  // 예배 종류별 미리 정의된 썸네일 이미지
+  const presetThumbnails: Partial<Record<Category, string>> = {
+    sundayAM: "https://gap.synology.me/worship/주일오전예배.png",
+    sundayPM: "https://gap.synology.me/worship/주일오후예배.png",
+    wednesday: "https://gap.synology.me/worship/수요예배.png",
+    friday: "https://gap.synology.me/worship/금요기도회.jpg",
+    youth: "https://gap.synology.me/worship/청년부예배.png",
+    student: "https://gap.synology.me/worship/학생부예배.png",
+  };
+
+  // 모달 열릴 때 기본 썸네일 설정
+  useEffect(() => {
+    if (isModalOpen) {
+      const presetUrl = presetThumbnails[fCategory];
+      if (presetUrl) {
+        setSelectedPreset(presetUrl);
+        setThumbSource("preset");
+      } else {
+        setSelectedPreset("");
+        setThumbSource("file");
+      }
+    }
+  }, [isModalOpen]);
+
+  // 카테고리 변경 시 해당 카테고리의 썸네일로 자동 변경
+  useEffect(() => {
+    if (thumbSource === "preset") {
+      const presetUrl = presetThumbnails[fCategory];
+      if (presetUrl) {
+        setSelectedPreset(presetUrl);
+      }
+    }
+  }, [fCategory, thumbSource]);
+
+  // 파일 미리보기
+  useEffect(() => {
+    if (thumbSource === "file" && fThumbFile) {
+      const objectUrl = URL.createObjectURL(fThumbFile);
+      setThumbPreview(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    } else if (thumbSource === "preset" && selectedPreset) {
+      setThumbPreview(selectedPreset);
+    } else {
+      setThumbPreview("");
+    }
+  }, [fThumbFile, thumbSource, selectedPreset]);
 
   const resetForm = () => {
     setFDate('');
@@ -68,10 +120,17 @@ export default function WorshipManagementPage() {
     setFUrl('');
     setFContent('');
     setFThumbFile(null);
+    setThumbPreview("");
+    setThumbSource("preset");
+    setSelectedPreset("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 썸네일 경로: 업로드(파일) 시 blob URL 미리보기 사용
+    const thumb = thumbPreview || "";
+
     const newWorship: Worship = {
       id: Date.now(),
       title: fTitle,
@@ -81,6 +140,7 @@ export default function WorshipManagementPage() {
       url: fUrl,
       verse: fVerse,
       content: fContent,
+      thumbnail: thumb,
     };
     setWorships([newWorship, ...worships]);
     setIsModalOpen(false);
@@ -146,114 +206,213 @@ export default function WorshipManagementPage() {
       {/* 새 예배 등록 모달 */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white overflow-hidden shadow-xl">
-            <div className="flex items-center justify-between border-b px-6 py-4">
+          <div className="w-full max-w-md rounded-2xl bg-white flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between border-b px-6 py-4 flex-shrink-0">
               <h2 className="text-lg font-bold">새 예배 등록</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg">✕</button>
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  resetForm();
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                ✕
+              </button>
             </div>
-            
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">날짜</label>
-                <input 
-                  type="date" 
-                  value={fDate}
-                  onChange={(e) => setFDate(e.target.value)}
-                  className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                  required 
-                />
+
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">날짜</label>
+                  <input
+                    type="date"
+                    value={fDate}
+                    onChange={(e) => setFDate(e.target.value)}
+                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">예배 종류</label>
+                  <select
+                    value={fCategory}
+                    onChange={(e) => setFCategory(e.target.value as Category)}
+                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    required
+                  >
+                    <option value="sundayAM">주일오전</option>
+                    <option value="sundayPM">주일오후</option>
+                    <option value="wednesday">수요</option>
+                    <option value="friday">금요</option>
+                    <option value="youth">청년</option>
+                    <option value="student">학생부</option>
+                    <option value="nurture">양육</option>
+                    <option value="special">특강</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">제목</label>
+                  <input
+                    type="text"
+                    value={fTitle}
+                    onChange={(e) => setFTitle(e.target.value)}
+                    placeholder="예: 2026-02-01 주일예배"
+                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">URL (YouTube)</label>
+                  <input
+                    type="url"
+                    value={fUrl}
+                    onChange={(e) => setFUrl(e.target.value)}
+                    placeholder="https://youtube.com/..."
+                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* 썸네일 (미리 정의된 이미지 또는 파일 선택) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">썸네일</label>
+
+                  {/* 썸네일 소스 선택 탭 */}
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setThumbSource("preset");
+                        setFThumbFile(null);
+                      }}
+                      className={[
+                        "flex-1 rounded-lg px-3 py-2 text-sm font-medium transition",
+                        thumbSource === "preset"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      ].join(" ")}
+                    >
+                      기본 이미지
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setThumbSource("file")}
+                      className={[
+                        "flex-1 rounded-lg px-3 py-2 text-sm font-medium transition",
+                        thumbSource === "file"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      ].join(" ")}
+                    >
+                      파일 선택
+                    </button>
+                  </div>
+
+                  {/* 기본 이미지 선택 */}
+                  {thumbSource === "preset" && (
+                    <div className="space-y-3">
+                      {/* 현재 선택된 예배의 썸네일만 표시 */}
+                      {presetThumbnails[fCategory] && (
+                        <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-indigo-600 ring-2 ring-indigo-600">
+                          <img
+                            src={presetThumbnails[fCategory]}
+                            alt="선택된 예배 썸네일"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-sm py-2 text-center">
+                            {fCategory === "sundayAM" && "주일오전예배"}
+                            {fCategory === "sundayPM" && "주일오후예배"}
+                            {fCategory === "wednesday" && "수요예배"}
+                            {fCategory === "friday" && "금요기도회"}
+                            {fCategory === "youth" && "청년부예배"}
+                            {fCategory === "student" && "학생부예배"}
+                          </div>
+                        </div>
+                      )}
+                      {!presetThumbnails[fCategory] && (
+                        <p className="text-sm text-gray-500 py-3 text-center">
+                          이 예배는 기본 이미지가 없습니다. 파일을 직접 선택해주세요.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 파일 선택 */}
+                  {thumbSource === "file" && (
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setFThumbFile(e.target.files?.[0] ?? null)}
+                        className="block w-full text-sm"
+                      />
+                    </div>
+                  )}
+
+                  {/* 미리보기 */}
+                  {thumbPreview && (
+                    <div className="mt-3 rounded-xl overflow-hidden bg-gray-100">
+                      <div className="relative w-full aspect-video">
+                        <img
+                          src={thumbPreview}
+                          alt="미리보기"
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">설교자</label>
+                  <input
+                    type="text"
+                    value={fPreacher}
+                    onChange={(e) => setFPreacher(e.target.value)}
+                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">성경 본문</label>
+                  <input
+                    type="text"
+                    value={fVerse}
+                    onChange={(e) => setFVerse(e.target.value)}
+                    placeholder="예: 요한복음 3:16"
+                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">내용</label>
+                  <textarea
+                    value={fContent}
+                    onChange={(e) => setFContent(e.target.value)}
+                    rows={3}
+                    placeholder="설교 요약 또는 안내 내용을 입력하세요."
+                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">예배 종류</label>
-                <select 
-                  value={fCategory}
-                  onChange={(e) => setFCategory(e.target.value)}
-                  className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                >
-                  <option value="sundayAM">주일오전</option>
-                  <option value="sundayPM">주일오후</option>
-                  <option value="wednesday">수요예배</option>
-                  <option value="friday">금요기도회</option>
-                  <option value="youth">청년/학생</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">제목</label>
-                <input 
-                  type="text" 
-                  value={fTitle}
-                  onChange={(e) => setFTitle(e.target.value)}
-                  placeholder="예: 2026-02-01 주일예배"
-                  className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                  required 
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">URL (YouTube)</label>
-                <input 
-                  type="url" 
-                  value={fUrl}
-                  onChange={(e) => setFUrl(e.target.value)}
-                  placeholder="https://youtube.com/..."
-                  className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">썸네일</label>
-                <input 
-                  type="file" 
-                  accept="image/*"
-                  onChange={(e) => setFThumbFile(e.target.files?.[0] ?? null)}
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">설교자</label>
-                <input 
-                  type="text" 
-                  value={fPreacher}
-                  onChange={(e) => setFPreacher(e.target.value)}
-                  className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                  required 
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">성경 본문</label>
-                <input 
-                  type="text" 
-                  value={fVerse}
-                  onChange={(e) => setFVerse(e.target.value)}
-                  placeholder="예: 요한복음 3:16"
-                  className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                  required 
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">내용</label>
-                <textarea 
-                  value={fContent}
-                  onChange={(e) => setFContent(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)}
+              {/* 제출/취소 - 하단 고정 */}
+              <div className="flex gap-3 px-6 py-4 border-t bg-white flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    resetForm();
+                  }}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   취소
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="flex-1 px-4 py-2 bg-indigo-600 rounded-lg text-sm font-medium text-white hover:bg-indigo-700"
                 >

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMemo, useState, useEffect, useCallback } from "react";
 
 export default function WorshipBoard() {
-    type Category = "all" | "sundayAM" | "sundayPM" | "wednesday" | "friday" | "youth";
+    type Category = "all" | "sundayAM" | "sundayPM" | "wednesday" | "friday" | "youth" | "student" | "nurture" | "special";
     interface Post {
         id: number;
         date: string;
@@ -104,14 +104,36 @@ export default function WorshipBoard() {
     const [fContent, setFContent] = useState<string>(""); // 상세 내용 (지금은 리스트에는 미표시)
     const [fThumbFile, setFThumbFile] = useState<File | null>(null);
     const [thumbPreview, setThumbPreview] = useState<string>("");
+    const [thumbSource, setThumbSource] = useState<"preset" | "file">("preset"); // 썸네일 소스 타입
+    const [selectedPreset, setSelectedPreset] = useState<string>(""); // 선택된 미리 정의된 이미지
 
     const [fCategory, setFCategory] = useState<Exclude<Category, "all">>(
         category !== "all" ? category : "sundayAM"
     );
 
+    // 예배 종류별 미리 정의된 썸네일 이미지
+    const presetThumbnails: Partial<Record<Exclude<Category, "all">, string>> = {
+        sundayAM: "https://gap.synology.me/worship/주일오전예배.png",
+        sundayPM: "https://gap.synology.me/worship/주일오후예배.png",
+        wednesday: "https://gap.synology.me/worship/수요예배.png",
+        friday: "https://gap.synology.me/worship/금요기도회.jpg",
+        youth: "https://gap.synology.me/worship/청년부예배.png",
+        student: "https://gap.synology.me/worship/학생부예배.png",
+    };
+
     useEffect(() => {
         if (open) {
-            setFCategory(category !== "all" ? category : "sundayAM");
+            const newCategory = category !== "all" ? category : "sundayAM";
+            setFCategory(newCategory);
+            // 모달이 열릴 때 선택된 카테고리의 썸네일을 기본으로 설정
+            const presetUrl = presetThumbnails[newCategory];
+            if (presetUrl) {
+                setSelectedPreset(presetUrl);
+                setThumbSource("preset");
+            } else {
+                setSelectedPreset("");
+                setThumbSource("file");
+            }
         }
     }, [open, category]);
 
@@ -121,14 +143,26 @@ export default function WorshipBoard() {
 
     // 파일 미리보기
     useEffect(() => {
-        if (!fThumbFile) {
+        if (thumbSource === "file" && fThumbFile) {
+            const objectUrl = URL.createObjectURL(fThumbFile);
+            setThumbPreview(objectUrl);
+            return () => URL.revokeObjectURL(objectUrl);
+        } else if (thumbSource === "preset" && selectedPreset) {
+            setThumbPreview(selectedPreset);
+        } else {
             setThumbPreview("");
-            return;
         }
-        const objectUrl = URL.createObjectURL(fThumbFile);
-        setThumbPreview(objectUrl);
-        return () => URL.revokeObjectURL(objectUrl);
-    }, [fThumbFile]);
+    }, [fThumbFile, thumbSource, selectedPreset]);
+
+    // 카테고리 변경 시 해당 카테고리의 썸네일로 자동 변경
+    useEffect(() => {
+        if (thumbSource === "preset") {
+            const presetUrl = presetThumbnails[fCategory];
+            if (presetUrl) {
+                setSelectedPreset(presetUrl);
+            }
+        }
+    }, [fCategory, thumbSource]);
 
     // 모달 열릴 때 바디 스크롤 잠금 (선택)
     useEffect(() => {
@@ -149,6 +183,8 @@ export default function WorshipBoard() {
         setFContent("");
         setFThumbFile(null);
         setThumbPreview("");
+        setThumbSource("preset");
+        setSelectedPreset("");
     }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -381,9 +417,9 @@ export default function WorshipBoard() {
             {/* ====== 업로드 모달 ====== */}
             {open && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4">
-                    <div className="w-full sm:max-w-md sm:rounded-2xl sm:overflow-hidden bg-white">
+                    <div className="w-full sm:max-w-md sm:rounded-2xl bg-white flex flex-col max-h-[90vh] sm:max-h-[85vh]">
                         {/* 헤더 */}
-                        <div className="flex items-center justify-between border-b px-4 py-3">
+                        <div className="flex items-center justify-between border-b px-4 py-3 flex-shrink-0">
                             <h2 className="text-base font-semibold">예배 업로드</h2>
                             <button
                                 onClick={() => {
@@ -397,8 +433,9 @@ export default function WorshipBoard() {
                             </button>
                         </div>
 
-                        {/* 폼 */}
-                        <form onSubmit={handleSubmit} className="px-4 py-4 space-y-4">
+                        {/* 폼 - 스크롤 가능 */}
+                        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                            <div className="px-4 py-4 space-y-4 overflow-y-auto flex-1">
                             {/* 날짜 */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">날짜</label>
@@ -425,6 +462,9 @@ export default function WorshipBoard() {
                                     <option value="wednesday">수요</option>
                                     <option value="friday">금요</option>
                                     <option value="youth">청년</option>
+                                    <option value="student">학생부</option>
+                                    <option value="nurture">양육</option>
+                                    <option value="special">특강</option>
                                 </select>
                             </div>
 
@@ -440,21 +480,86 @@ export default function WorshipBoard() {
                                 />
                             </div>
 
-                            {/* 썸네일 (파일 입력 + 미리보기) */}
+                            {/* 썸네일 (미리 정의된 이미지 또는 파일 선택) */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">썸네일</label>
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => setFThumbFile(e.target.files?.[0] ?? null)}
-                                        className="block w-full text-sm"
-                                    />
+
+                                {/* 썸네일 소스 선택 탭 */}
+                                <div className="flex gap-2 mb-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setThumbSource("preset");
+                                            setFThumbFile(null);
+                                        }}
+                                        className={[
+                                            "flex-1 rounded-lg px-3 py-2 text-sm font-medium transition",
+                                            thumbSource === "preset"
+                                                ? "bg-gray-900 text-white"
+                                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                        ].join(" ")}
+                                    >
+                                        기본 이미지
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setThumbSource("file")}
+                                        className={[
+                                            "flex-1 rounded-lg px-3 py-2 text-sm font-medium transition",
+                                            thumbSource === "file"
+                                                ? "bg-gray-900 text-white"
+                                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                        ].join(" ")}
+                                    >
+                                        파일 선택
+                                    </button>
                                 </div>
+
+                                {/* 기본 이미지 선택 */}
+                                {thumbSource === "preset" && (
+                                    <div className="space-y-3">
+                                        {/* 현재 선택된 예배의 썸네일만 표시 */}
+                                        {presetThumbnails[fCategory] && (
+                                            <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-gray-900 ring-2 ring-gray-900">
+                                                <img
+                                                    src={presetThumbnails[fCategory]}
+                                                    alt="선택된 예배 썸네일"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-sm py-2 text-center">
+                                                    {fCategory === "sundayAM" && "주일오전예배"}
+                                                    {fCategory === "sundayPM" && "주일오후예배"}
+                                                    {fCategory === "wednesday" && "수요예배"}
+                                                    {fCategory === "friday" && "금요기도회"}
+                                                    {fCategory === "youth" && "청년부예배"}
+                                                    {fCategory === "student" && "학생부예배"}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {!presetThumbnails[fCategory] && (
+                                            <p className="text-sm text-gray-500 py-3 text-center">
+                                                이 예배는 기본 이미지가 없습니다. 파일을 직접 선택해주세요.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* 파일 선택 */}
+                                {thumbSource === "file" && (
+                                    <div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => setFThumbFile(e.target.files?.[0] ?? null)}
+                                            className="block w-full text-sm"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* 미리보기 */}
                                 {thumbPreview && (
                                     <div className="mt-3 rounded-xl overflow-hidden bg-gray-100">
                                         <div className="relative w-full aspect-video">
-                                            {/* 미리보기는 img로 간단히 */}
                                             <img
                                                 src={thumbPreview}
                                                 alt="미리보기"
@@ -501,9 +606,10 @@ export default function WorshipBoard() {
                                     className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-300"
                                 />
                             </div>
+                            </div>
 
-                            {/* 제출/취소 */}
-                            <div className="flex gap-2 pt-2 pb-3 sm:pb-4">
+                            {/* 제출/취소 - 하단 고정 */}
+                            <div className="flex gap-2 px-4 py-3 border-t bg-white flex-shrink-0">
                                 <button
                                     type="button"
                                     onClick={() => {
